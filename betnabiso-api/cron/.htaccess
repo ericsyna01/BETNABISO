@@ -1,0 +1,8 @@
+# Bloque l'accès HTTP direct au répertoire cron (sauf si token valide dans l'URL)
+# Les scripts vérifient eux-mêmes le token, mais cette couche bloque les scans.
+<Files "bootstrap.php">
+    Deny from all
+</Files>
+<Files "cron.log">
+    Deny from all
+</Files>

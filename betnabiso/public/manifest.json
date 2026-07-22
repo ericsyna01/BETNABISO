@@ -1,0 +1,17 @@
+{
+  "name": "BETNABISO — Gestion des Interventions",
+  "short_name": "BETNABISO",
+  "description": "Plateforme de gestion des interventions et techniciens",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "theme_color": "#171310",
+  "background_color": "#000000",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr",
+  "categories": ["business", "productivity"]
+}

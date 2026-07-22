@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude/
+
+# Anciens artefacts de build (client précédent)
+angular.zip
+api.zip
+heartbeat-bat/AMABELTECH_Guide_Heartbeat.pdf
