@@ -26,6 +26,7 @@ if (DB_DRIVER === 'pgsql') {
     $db->exec('ALTER TABLE machine_status ADD COLUMN IF NOT EXISTS last_ip_change_at TIMESTAMP DEFAULT NULL');
     $db->exec('ALTER TABLE machine_status ADD COLUMN IF NOT EXISTS duplicate_suspected BOOLEAN NOT NULL DEFAULT FALSE');
     $db->exec('ALTER TABLE machine_status ADD COLUMN IF NOT EXISTS offline_alerted_at TIMESTAMP DEFAULT NULL');
+    $db->exec('ALTER TABLE machine_status ADD COLUMN IF NOT EXISTS online_since TIMESTAMP DEFAULT NOW()');
 } else {
     $db->exec("CREATE TABLE IF NOT EXISTS machine_status (
         id                  INT AUTO_INCREMENT PRIMARY KEY,
@@ -76,19 +77,25 @@ if ($m === 'POST' && param('action') === 'bulk-sync') {
         } catch (Exception $e) { /* agents table indisponible → on garde l'id tel quel */ }
 
         if (DB_DRIVER === 'pgsql') {
+            // online_since ne recule que si la machine avait dépassé le seuil hors-ligne
+            // depuis son dernier ping : ça marque le début d'une nouvelle session continue
+            // plutôt que la première connexion jamais vue (first_seen).
             $db->prepare(
-                "INSERT INTO machine_status (agent_id, type, first_seen, last_seen, ip, duplicate_suspected)
-                 VALUES (?, ?, NOW(), NOW(), ?, ?)
+                "INSERT INTO machine_status (agent_id, type, first_seen, last_seen, online_since, ip, duplicate_suspected)
+                 VALUES (?, ?, NOW(), NOW(), NOW(), ?, ?)
                  ON CONFLICT (agent_id, type) DO UPDATE SET
+                    online_since = CASE WHEN EXTRACT(EPOCH FROM (NOW() - machine_status.last_seen)) > " . HB_OFFLINE_THRESHOLD . "
+                                        THEN NOW() ELSE machine_status.online_since END,
                     last_seen = NOW(), ip = EXCLUDED.ip,
                     duplicate_suspected = EXCLUDED.duplicate_suspected,
                     offline_alerted_at = NULL"
             )->execute([$agentId, $type, $ip, $dup ? 't' : 'f']);
         } else {
             $db->prepare(
-                "INSERT INTO machine_status (agent_id, type, first_seen, last_seen, ip, duplicate_suspected)
-                 VALUES (?, ?, NOW(), NOW(), ?, ?)
+                "INSERT INTO machine_status (agent_id, type, first_seen, last_seen, online_since, ip, duplicate_suspected)
+                 VALUES (?, ?, NOW(), NOW(), NOW(), ?, ?)
                  ON DUPLICATE KEY UPDATE
+                    online_since = IF(TIMESTAMPDIFF(SECOND, last_seen, NOW()) > " . HB_OFFLINE_THRESHOLD . ", NOW(), online_since),
                     last_seen = NOW(), ip = VALUES(ip),
                     duplicate_suspected = VALUES(duplicate_suspected),
                     offline_alerted_at = NULL"
@@ -133,22 +140,25 @@ if ($m === 'GET' && ($GLOBALS['path_id'] ?? '') === 'summary') {
     requireAuth();
     if ($cached = cacheGet('hb:summary')) respond(200, $cached);
 
-    $seuil = date('Y-m-d H:i:s', time() - HB_OFFLINE_THRESHOLD);
+    $seuil    = date('Y-m-d H:i:s', time() - HB_OFFLINE_THRESHOLD);
+    $seuil24h = date('Y-m-d H:i:s', time() - 86400);
     $stmt  = $db->prepare(
         "SELECT
            SUM(CASE WHEN type='caisse'  AND last_seen >= ? THEN 1 ELSE 0 END) AS caisse_online,
            SUM(CASE WHEN type='serveur' AND last_seen >= ? THEN 1 ELSE 0 END) AS serveur_online,
            COUNT(DISTINCT agent_id) AS total_monitored,
-           SUM(CASE WHEN duplicate_suspected THEN 1 ELSE 0 END) AS duplicates_suspected
+           SUM(CASE WHEN duplicate_suspected THEN 1 ELSE 0 END) AS duplicates_suspected,
+           COUNT(DISTINCT CASE WHEN last_seen >= ? AND online_since <= ? THEN agent_id END) AS long_online_agents
          FROM machine_status"
     );
-    $stmt->execute([$seuil, $seuil]);
+    $stmt->execute([$seuil, $seuil, $seuil, $seuil24h]);
     $r = $stmt->fetch(PDO::FETCH_ASSOC);
     $data = [
         'caisseOnline'        => (int)($r['caisse_online']         ?? 0),
         'serveurOnline'       => (int)($r['serveur_online']        ?? 0),
         'totalMonitored'      => (int)($r['total_monitored']       ?? 0),
         'duplicatesSuspected' => (int)($r['duplicates_suspected']  ?? 0),
+        'longOnlineAgents'    => (int)($r['long_online_agents']    ?? 0),
     ];
     cacheSet('hb:summary', $data, 5);
     respond(200, $data);
@@ -159,7 +169,7 @@ if ($m === 'GET' && ($GLOBALS['path_id'] ?? '') === 'all') {
     requireAuth();
     if ($cached = cacheGet('hb:all')) respond(200, $cached);
 
-    $stmt = $db->query("SELECT agent_id, type, first_seen, last_seen, ip, duplicate_suspected FROM machine_status");
+    $stmt = $db->query("SELECT agent_id, type, first_seen, last_seen, online_since, ip, duplicate_suspected FROM machine_status");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $result = [];
@@ -167,15 +177,20 @@ if ($m === 'GET' && ($GLOBALS['path_id'] ?? '') === 'all') {
         $aid       = $row['agent_id'];
         $lastTs    = strtotime($row['last_seen']);
         $firstTs   = strtotime($row['first_seen']);
+        $onlineTs  = strtotime($row['online_since']);
         $diff      = time() - $lastTs;
+        $online    = $diff < HB_OFFLINE_THRESHOLD;
         if (!isset($result[$aid])) $result[$aid] = ['caisse' => null, 'serveur' => null];
         $result[$aid][$row['type']] = [
-            'online'             => $diff < HB_OFFLINE_THRESHOLD,
+            'online'             => $online,
             'minutesAgo'         => (int)floor($diff / 60),
             'ip'                 => $row['ip'],
             'duplicateSuspected' => (bool)$row['duplicate_suspected'],
             // Incoherent pour les agents migres (colonne ajoutee apres leur premier ping reel) → on cache
             'firstSeen'          => $firstTs <= $lastTs ? date('c', $firstTs) : null,
+            // Duree de la session en cours (reinitialisee des qu'un ping arrive apres une coupure) ;
+            // n'a de sens que si la machine est actuellement en ligne.
+            'onlineSince'        => ($online && $onlineTs <= $lastTs) ? date('c', $onlineTs) : null,
         ];
     }
     cacheSet('hb:all', $result, 5);
@@ -188,7 +203,7 @@ if ($m === 'GET') {
     $agentId = $GLOBALS['path_id'] ?? param('agentId');
     if (!$agentId) respond(400, ['error' => 'agentId requis']);
 
-    $stmt = $db->prepare("SELECT type, first_seen, last_seen, ip, duplicate_suspected FROM machine_status WHERE agent_id = ?");
+    $stmt = $db->prepare("SELECT type, first_seen, last_seen, online_since, ip, duplicate_suspected FROM machine_status WHERE agent_id = ?");
     $stmt->execute([$agentId]);
     $rows = $stmt->fetchAll();
 
@@ -196,17 +211,20 @@ if ($m === 'GET') {
     $result = ['caisse' => null, 'serveur' => null];
 
     foreach ($rows as $row) {
-        $ts      = strtotime($row['last_seen']);
-        $firstTs = strtotime($row['first_seen']);
-        $diff    = time() - $ts;
+        $ts       = strtotime($row['last_seen']);
+        $firstTs  = strtotime($row['first_seen']);
+        $onlineTs = strtotime($row['online_since']);
+        $diff     = time() - $ts;
+        $online   = $diff < $seuil;
         $result[$row['type']] = [
-            'online'             => $diff < $seuil,
+            'online'             => $online,
             'lastSeen'           => date('c', $ts),
             'minutesAgo'         => (int)floor($diff / 60),
             'ip'                 => $row['ip'],
             'duplicateSuspected' => (bool)$row['duplicate_suspected'],
             // Incoherent pour les agents migres (colonne ajoutee apres leur premier ping reel) → on cache
             'firstSeen'          => $firstTs <= $ts ? date('c', $firstTs) : null,
+            'onlineSince'        => ($online && $onlineTs <= $ts) ? date('c', $onlineTs) : null,
         ];
     }
 

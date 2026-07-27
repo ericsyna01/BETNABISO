@@ -140,7 +140,7 @@ import { AuthService } from '../../../core/services/auth.service';
       input {
         flex: 1; background: none; border: none; outline: none;
         color: #f2e9d0; font-size: 14px; font-family: inherit;
-        &::placeholder { color: #4d4634; }
+        &::placeholder { color: #8a7f63; }
       }
     }
     .field.focused .field-row { border-color: #d4af37; }

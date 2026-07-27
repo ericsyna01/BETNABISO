@@ -40,7 +40,7 @@ if ($m === 'POST') {
     $contact   = trim($b['contactNom'] ?? '');
     $numero    = trim($b['contactNumero'] ?? '');
 
-    if (!in_array($typePanne, ['Caisse', 'Serveur', 'Réseau', 'Autre'], true)) {
+    if ($typePanne === '' || mb_strlen($typePanne) > 50) {
         respond(400, ['error' => 'Type de panne invalide']);
     }
     if ($desc === '' || mb_strlen($desc) > 500) {

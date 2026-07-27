@@ -1,15 +1,20 @@
 <?php
 /**
- * Cron : alerte quand une machine (caisse/serveur) bascule en ligne → hors ligne
- * Planification (crontab VPS) : toutes les 2 minutes (minute step 2)
- *   php /var/www/betnabiso-api/cron/machine-offline.php
+ * DÉSACTIVÉ : ce cron générait une notification "machine hors ligne" par
+ * simple coupure réseau mobile/ADSL (60s de seuil), noyant les vraies pannes
+ * sous le bruit (même décision et même constat que sur amabeltech, où ce
+ * cron a été retiré du crontab après ~650 notifications en une journée).
+ * Laissé en place mais neutralisé, au cas où quelqu'un le redéclenche par
+ * erreur depuis un vieux crontab.
  *
- * Seuil hors ligne : doit rester cohérent avec HB_OFFLINE_THRESHOLD dans routes/heartbeat.php
- * Edge-triggered : une seule notification par episode hors ligne (offline_alerted_at),
- * remis a NULL automatiquement des qu'un ping reel est recu (voir routes/heartbeat.php).
+ * Ancien fonctionnement (conservé ci-dessous en commentaire pour référence) :
+ * alerte quand une machine (caisse/serveur) bascule en ligne → hors ligne,
+ * planifié toutes les 2 minutes, edge-triggered via offline_alerted_at.
  */
 
 require __DIR__ . '/bootstrap.php';
+cronLog("machine-offline.php : désactivé (notifications hors-ligne supprimées, trop de bruit)");
+exit(0);
 
 const OFFLINE_SEUIL = 60;
 

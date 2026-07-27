@@ -10,6 +10,7 @@ export interface MachineInfo {
   ip: string;
   duplicateSuspected?: boolean;
   firstSeen?: string;
+  onlineSince?: string | null;
 }
 
 export interface AgentMachineStatus {
@@ -22,6 +23,7 @@ export interface MachineSummary {
   serveurOnline:       number;
   totalMonitored:      number;
   duplicatesSuspected: number;
+  longOnlineAgents:    number;
 }
 
 export function formatMinutesAgo(minutes: number): string {
@@ -30,6 +32,18 @@ export function formatMinutesAgo(minutes: number): string {
   const hours = Math.floor((minutes % 1440) / 60);
   if (days > 0) return hours > 0 ? `${days}j ${hours}h` : `${days}j`;
   return `${hours}h`;
+}
+
+const HB_LONG_ONLINE_MS = 24 * 60 * 60 * 1000;
+
+export function isLongOnline(m: MachineInfo | null | undefined): boolean {
+  if (!m?.online || !m.onlineSince) return false;
+  return Date.now() - new Date(m.onlineSince).getTime() >= HB_LONG_ONLINE_MS;
+}
+
+export function formatOnlineSince(iso: string): string {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  return formatMinutesAgo(Math.max(0, minutes));
 }
 
 @Injectable({ providedIn: 'root' })

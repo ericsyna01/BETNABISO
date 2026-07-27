@@ -120,4 +120,13 @@ if ($m === 'POST' && $id) {
     respond(201, formatGroupMsg($stmt->fetch()));
 }
 
+// DELETE /groups/:id — supprimer un groupe (admin/superadmin uniquement)
+if ($m === 'DELETE' && $id) {
+    requireRole(['superadmin', 'admin'], $current);
+    $db->prepare('DELETE FROM group_messages WHERE "groupId" = ?')->execute([$id]);
+    $db->prepare('DELETE FROM chat_group_members WHERE "groupId" = ?')->execute([$id]);
+    $db->prepare('DELETE FROM chat_groups WHERE id = ?')->execute([$id]);
+    respond(200, ['message' => 'Groupe supprimé']);
+}
+
 respond(405, ['error' => 'Méthode non autorisée']);

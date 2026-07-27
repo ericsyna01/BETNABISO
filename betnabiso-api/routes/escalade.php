@@ -20,9 +20,8 @@ if ($m === 'GET') {
     $rows = $stmt->fetchAll();
     foreach ($rows as &$r) {
         $r['dureeH'] = round((float)$r['dureeH'], 1);
-        if (!empty($r['createdat'])) {
-            $r['createdAt'] = date('c', strtotime($r['createdat']));
-            unset($r['createdat']);
+        if (!empty($r['createdAt'])) {
+            $r['createdAt'] = date('c', strtotime($r['createdAt']));
         }
     }
     respond(200, $rows);

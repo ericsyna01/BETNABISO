@@ -35,6 +35,8 @@ match ($resource) {
     'missions'      => require __DIR__ . '/routes/missions.php',
     'heartbeat'     => require __DIR__ . '/routes/heartbeat.php',
     'self-service'  => require __DIR__ . '/routes/self-service.php',
+    'creneaux'      => require __DIR__ . '/routes/creneaux.php',
+    'type-labels'   => require __DIR__ . '/routes/type-labels.php',
     'sse'           => require __DIR__ . '/sse.php',
     default         => respond(404, ['error' => 'Ressource non trouvée']),
 };

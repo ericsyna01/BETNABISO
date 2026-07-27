@@ -209,18 +209,18 @@ interface RoleDoc {
 
     /* ── Hero ── */
     .docs-hero {
-      background: linear-gradient(135deg, #1a3a5c 60%, #2a5fa0);
+      background: linear-gradient(135deg, #000000 60%, #1a1409);
       padding: 28px 32px 24px;
       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
     }
     .hero-content { display: flex; align-items: center; gap: 16px; }
-    .hero-icon { font-size: 44px; width: 44px; height: 44px; color: #38c457; }
+    .hero-icon { font-size: 44px; width: 44px; height: 44px; color: #d4af37; }
     .hero-content h1 { margin: 0; font-size: 26px; font-weight: 800; color: white; }
-    .hero-content p { margin: 4px 0 0; color: #90caf9; font-size: 14px; }
+    .hero-content p { margin: 4px 0 0; color: #b3a88a; font-size: 14px; }
     .hero-meta { display: flex; gap: 10px; flex-wrap: wrap; }
     .meta-chip {
       display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(255,255,255,0.12); color: #e3f2fd;
+      background: rgba(212,175,55,0.12); color: #f2e9d0;
       border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 500;
       mat-icon { font-size: 15px; width: 15px; height: 15px; }
     }
@@ -266,8 +266,8 @@ interface RoleDoc {
       padding: 8px 16px; cursor: pointer; font-size: 13px;
       color: #455a64; transition: all 0.15s; border-left: 3px solid transparent;
       mat-icon { font-size: 16px; width: 16px; height: 16px; color: #90a4ae; flex-shrink: 0; }
-      &:hover { background: #f5f7fa; color: #1a3a5c; }
-      &.active { color: #1a3a5c; font-weight: 600; background: #f0f7ff; border-left-color: #2a5fa0; }
+      &:hover { background: #f5f7fa; color: #171310; }
+      &.active { color: #171310; font-weight: 600; background: #fbf3d9; border-left-color: #d4af37; }
     }
 
     /* ── Doc content ── */
@@ -316,11 +316,11 @@ interface RoleDoc {
     /* Table */
     .doc-table-wrap { overflow-x: auto; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
     .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
-    .doc-table thead tr { background: #1a3a5c; color: white; }
+    .doc-table thead tr { background: #171310; color: #f2e9d0; }
     .doc-table th { padding: 10px 14px; text-align: left; font-weight: 600; white-space: nowrap; }
     .doc-table tbody tr:nth-child(even) { background: #f8fafc; }
     .doc-table td { padding: 9px 14px; border-bottom: 1px solid #e0e6ed; color: #37474f; vertical-align: middle; }
-    .doc-table tbody tr:hover { background: #f0f7ff; }
+    .doc-table tbody tr:hover { background: #fbf3d9; }
 
     /* Tips / Warnings */
     .tips-box, .warn-box {

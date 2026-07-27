@@ -349,7 +349,10 @@ export class DeplacementDialogComponent {
             <th mat-header-cell *matHeaderCellDef (click)="toggleSort('description')" class="sortable-th">
               Description <mat-icon class="sort-icon">{{ sortIcon('description') }}</mat-icon>
             </th>
-            <td mat-cell *matCellDef="let i" class="desc-cell">{{ i.description }}</td>
+            <td mat-cell *matCellDef="let i" class="desc-cell"
+                [matTooltip]="i.description" matTooltipClass="desc-tooltip" [matTooltipDisabled]="!i.description">
+              {{ i.description }}
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="actions">

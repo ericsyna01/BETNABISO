@@ -5,6 +5,22 @@ $db      = getDB();
 $id      = $GLOBALS['path_id'] ?? param('id');
 $action  = param('action');
 
+// Trace permanente dans le journal d'audit : contrairement à la notification
+// (modifiable/supprimable), cette entrée reste même une fois la demande
+// traitée ou la notification supprimée.
+function auditAgentModification(PDO $db, array $current, ?string $agentId, string $details): void {
+    try {
+        $db->prepare(
+            'INSERT INTO audit_logs (id,"userId","userNom","userRole",action,resource,"resourceId",details,"createdAt")
+             VALUES (?,?,?,?,?,?,?,?,NOW())'
+        )->execute([
+            bin2hex(random_bytes(16)), trim($current['user_id']),
+            $current['prenom'].' '.$current['nom'], $current['role'],
+            'SUBMIT', 'agent_modification', $agentId, $details,
+        ]);
+    } catch (Exception $e) {}
+}
+
 function formatNotif(array $n): array {
     $n = trimIds($n);
     $map = ['agentid'=>'agentId','agentnom'=>'agentNom',
@@ -52,6 +68,10 @@ if ($m === 'POST') {
     $stmt = $db->prepare('SELECT * FROM notifications WHERE id = ?');
     $stmt->execute([$newId]);
     publishEvent('notifications');
+    if ($b['type'] === 'agent_modification') {
+        $details = ($b['agentNom'] ?? 'agent') . ' — ' . ($b['message'] ?? '');
+        auditAgentModification($db, $current, $b['agentId'] ?? null, $details);
+    }
     respond(201, formatNotif($stmt->fetch()));
 }
 

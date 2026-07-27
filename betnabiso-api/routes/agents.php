@@ -5,6 +5,19 @@ $db      = getDB();
 $id      = $GLOBALS['path_id'] ?? param('id');
 $action  = param('action');
 
+function auditAgent(PDO $db, array $current, string $act, string $agentId, string $details = ''): void {
+    try {
+        $db->prepare(
+            'INSERT INTO audit_logs (id,"userId","userNom","userRole",action,resource,"resourceId",details,"createdAt")
+             VALUES (?,?,?,?,?,?,?,?,NOW())'
+        )->execute([
+            bin2hex(random_bytes(16)), trim($current['user_id']),
+            $current['prenom'].' '.$current['nom'], $current['role'],
+            $act, 'agent', $agentId, $details,
+        ]);
+    } catch (Exception $e) {}
+}
+
 function formatAgent(array $a): array {
     $a = trimIds($a);
     if (isset($a['localisation']) && is_string($a['localisation'])) {
@@ -74,6 +87,7 @@ if ($m === 'POST') {
     $stmt = $db->prepare('SELECT * FROM agents WHERE id = ?');
     $stmt->execute([$newId]);
     publishEvent('agents');
+    auditAgent($db, $current, 'CREATE', $newId, 'Agent créé : ' . ($b['nomAgent'] ?? ''));
     respond(201, formatAgent($stmt->fetch()));
 }
 
@@ -103,6 +117,7 @@ if ($m === 'PUT' && $id) {
     $stmt = $db->prepare('SELECT * FROM agents WHERE id = ?');
     $stmt->execute([$id]);
     publishEvent('agents');
+    auditAgent($db, $current, 'UPDATE', $id, 'Champs modifiés : ' . implode(', ', array_keys($b)));
     respond(200, formatAgent($stmt->fetch()));
 }
 
@@ -116,13 +131,18 @@ if ($m === 'PATCH' && $id) {
     $stmt = $db->prepare('SELECT * FROM agents WHERE id = ?');
     $stmt->execute([$id]);
     publishEvent('agents');
+    auditAgent($db, $current, 'UPDATE', $id, 'Statut changé : ' . $statut);
     respond(200, formatAgent($stmt->fetch()));
 }
 
 if ($m === 'DELETE' && $id) {
     requireRole(['superadmin', 'admin'], $current);
+    $before = $db->prepare('SELECT "nomAgent" FROM agents WHERE id = ?');
+    $before->execute([$id]);
+    $nomAgent = $before->fetchColumn();
     $db->prepare('DELETE FROM agents WHERE id = ?')->execute([$id]);
     publishEvent('agents');
+    auditAgent($db, $current, 'DELETE', $id, 'Agent supprimé : ' . ($nomAgent ?: $id));
     respond(200, ['message' => 'Agent supprimé']);
 }
 

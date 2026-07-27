@@ -87,10 +87,12 @@ export class AgentNotifDialogComponent {
               <mat-icon>link</mat-icon> Lien de signalement
             </button>
           }
-          @if (auth.isAdmin() && agent()) {
+          @if ((auth.isAdmin() || auth.isSupport() || auth.isTechnicien()) && agent()) {
             <a mat-stroked-button [routerLink]="['/interventions/new']" [queryParams]="{agentId: agent()?.id}">
               <mat-icon>add</mat-icon> Nouvelle intervention
             </a>
+          }
+          @if (auth.isAdmin() && agent()) {
             <a mat-raised-button color="primary" [routerLink]="['/agents', agent()?.id, 'edit']">
               <mat-icon>edit</mat-icon> Modifier
             </a>

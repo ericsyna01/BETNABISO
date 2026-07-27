@@ -20,7 +20,7 @@ import { AgentService } from '../../../core/services/agent.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ZoneService } from '../../../core/services/zone.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
-import { HeartbeatService, MachineSummary, AgentMachineStatus, formatMinutesAgo } from '../../../core/services/heartbeat.service';
+import { HeartbeatService, MachineSummary, AgentMachineStatus, formatMinutesAgo, isLongOnline, formatOnlineSince } from '../../../core/services/heartbeat.service';
 import { SseService } from '../../../core/services/sse.service';
 import { Subscription } from 'rxjs';
 import { Agent, AgentStatut } from '../../../core/models/agent.model';
@@ -154,6 +154,16 @@ export class RedeploiementDialogComponent {
                 <span class="mstat-label">doublon{{ summary()!.duplicatesSuspected > 1 ? 's' : '' }} suspecté{{ summary()!.duplicatesSuspected > 1 ? 's' : '' }}</span>
               </div>
             }
+            @if (summary()!.longOnlineAgents > 0) {
+              <div class="mstat-sep"></div>
+              <div class="mstat mstat-warn mstat-clickable" [class.mstat-active]="filterMachine() === 'long-online'"
+                   (click)="toggleMachineFilter('long-online')"
+                   matTooltip="Filtrer : agents dont une machine est en ligne en continu depuis plus de 24h">
+                <mat-icon style="font-size:14px;width:14px;height:14px;color:#e6a817">schedule</mat-icon>
+                <span class="mstat-num" style="color:#c07f00">{{ summary()!.longOnlineAgents }}</span>
+                <span class="mstat-label">agent{{ summary()!.longOnlineAgents > 1 ? 's' : '' }} en ligne +24h</span>
+              </div>
+            }
           </div>
           <button mat-icon-button (click)="refreshSummary()" [disabled]="summaryLoading()"
                   matTooltip="Actualiser" class="monitor-refresh">
@@ -277,8 +287,8 @@ export class RedeploiementDialogComponent {
             </th>
             <td mat-cell *matCellDef="let a" class="ms-col">
               @if (allStatuses()[a.id]?.caisse?.online) {
-                <span class="ms-dot on"
-                      [matTooltip]="'Caisse en ligne · ' + allStatuses()[a.id]!.caisse!.ip"></span>
+                <span class="ms-dot on" [class.ms-dot-long]="isLongOnline(allStatuses()[a.id]?.caisse)"
+                      [matTooltip]="'Caisse en ligne · ' + allStatuses()[a.id]!.caisse!.ip + (allStatuses()[a.id]!.caisse!.onlineSince ? ' · depuis ' + formatOnlineSince(allStatuses()[a.id]!.caisse!.onlineSince!) : '')"></span>
               } @else if (allStatuses()[a.id]?.caisse) {
                 <span class="ms-dot off"
                       [matTooltip]="'Caisse hors ligne · vérifié il y a ' + formatMinutesAgo(allStatuses()[a.id]!.caisse!.minutesAgo)"></span>
@@ -298,8 +308,8 @@ export class RedeploiementDialogComponent {
             </th>
             <td mat-cell *matCellDef="let a" class="ms-col">
               @if (allStatuses()[a.id]?.serveur?.online) {
-                <span class="ms-dot on"
-                      [matTooltip]="'Serveur en ligne · ' + allStatuses()[a.id]!.serveur!.ip"></span>
+                <span class="ms-dot on" [class.ms-dot-long]="isLongOnline(allStatuses()[a.id]?.serveur)"
+                      [matTooltip]="'Serveur en ligne · ' + allStatuses()[a.id]!.serveur!.ip + (allStatuses()[a.id]!.serveur!.onlineSince ? ' · depuis ' + formatOnlineSince(allStatuses()[a.id]!.serveur!.onlineSince!) : '')"></span>
               } @else if (allStatuses()[a.id]?.serveur) {
                 <span class="ms-dot off"
                       [matTooltip]="'Serveur hors ligne · vérifié il y a ' + formatMinutesAgo(allStatuses()[a.id]!.serveur!.minutesAgo)"></span>
@@ -389,7 +399,8 @@ export class RedeploiementDialogComponent {
                 <span class="ac-status">
                   <mat-icon class="ms-col-icon" matTooltip="État caisse">point_of_sale</mat-icon>
                   @if (allStatuses()[a.id]?.caisse?.online) {
-                    <span class="ms-dot on" matTooltip="Caisse en ligne"></span>
+                    <span class="ms-dot on" [class.ms-dot-long]="isLongOnline(allStatuses()[a.id]?.caisse)"
+                          [matTooltip]="'Caisse en ligne' + (allStatuses()[a.id]!.caisse!.onlineSince ? ' · depuis ' + formatOnlineSince(allStatuses()[a.id]!.caisse!.onlineSince!) : '')"></span>
                   } @else if (allStatuses()[a.id]?.caisse) {
                     <span class="ms-dot off"
                           [matTooltip]="'Caisse hors ligne · vérifié il y a ' + formatMinutesAgo(allStatuses()[a.id]!.caisse!.minutesAgo)"></span>
@@ -400,7 +411,8 @@ export class RedeploiementDialogComponent {
                 <span class="ac-status">
                   <mat-icon class="ms-col-icon" matTooltip="État serveur">dns</mat-icon>
                   @if (allStatuses()[a.id]?.serveur?.online) {
-                    <span class="ms-dot on" matTooltip="Serveur en ligne"></span>
+                    <span class="ms-dot on" [class.ms-dot-long]="isLongOnline(allStatuses()[a.id]?.serveur)"
+                          [matTooltip]="'Serveur en ligne' + (allStatuses()[a.id]!.serveur!.onlineSince ? ' · depuis ' + formatOnlineSince(allStatuses()[a.id]!.serveur!.onlineSince!) : '')"></span>
                   } @else if (allStatuses()[a.id]?.serveur) {
                     <span class="ms-dot off"
                           [matTooltip]="'Serveur hors ligne · vérifié il y a ' + formatMinutesAgo(allStatuses()[a.id]!.serveur!.minutesAgo)"></span>
@@ -526,6 +538,7 @@ export class RedeploiementDialogComponent {
       &.on  { background: #43a047; box-shadow: 0 0 0 3px rgba(67,160,71,.2); animation: pulse-sm 2s infinite; }
       &.off { background: #e53935; }
       &.unk { background: #d0d0d0; }
+      &.ms-dot-long { background: #fb8c00; box-shadow: 0 0 0 3px rgba(251,140,0,.22); }
     }
     @keyframes pulse-sm {
       0%   { box-shadow: 0 0 0 0 rgba(67,160,71,.45); }
@@ -678,7 +691,9 @@ export class AgentListComponent implements OnInit, OnDestroy {
   searchQuery = signal('');
   filterZone = signal('');
   filterStatut = signal('');
-  filterMachine = signal<'' | 'caisse-on' | 'serveur-on' | 'duplicate' | 'monitored'>('');
+  filterMachine = signal<'' | 'caisse-on' | 'serveur-on' | 'duplicate' | 'monitored' | 'long-online'>('');
+  isLongOnline = isLongOnline;
+  formatOnlineSince = formatOnlineSince;
 
   private allAgents = computed(() => this.agentSvc.getAll());
 
@@ -686,11 +701,12 @@ export class AgentListComponent implements OnInit, OnDestroy {
 
   machineFilterLabel = computed(() => {
     switch (this.filterMachine()) {
-      case 'caisse-on':  return 'Caisses en ligne';
-      case 'serveur-on': return 'Serveurs en ligne';
-      case 'duplicate':  return 'Doublons suspectés';
-      case 'monitored':  return 'Agents surveillés';
-      default:           return '';
+      case 'caisse-on':   return 'Caisses en ligne';
+      case 'serveur-on':  return 'Serveurs en ligne';
+      case 'duplicate':   return 'Doublons suspectés';
+      case 'monitored':   return 'Agents surveillés';
+      case 'long-online': return 'En ligne depuis +24h';
+      default:            return '';
     }
   });
 
@@ -702,7 +718,7 @@ export class AgentListComponent implements OnInit, OnDestroy {
     this.pageIndex.set(0);
   }
 
-  toggleMachineFilter(value: '' | 'caisse-on' | 'serveur-on' | 'duplicate' | 'monitored'): void {
+  toggleMachineFilter(value: '' | 'caisse-on' | 'serveur-on' | 'duplicate' | 'monitored' | 'long-online'): void {
     this.filterMachine.set(this.filterMachine() === value ? '' : value);
     this.pageIndex.set(0);
   }
@@ -756,6 +772,9 @@ export class AgentListComponent implements OnInit, OnDestroy {
     );
     if (fm === 'monitored') agents = agents.filter(a =>
       !!this.allStatuses()[a.id]?.caisse || !!this.allStatuses()[a.id]?.serveur
+    );
+    if (fm === 'long-online') agents = agents.filter(a =>
+      isLongOnline(this.allStatuses()[a.id]?.caisse) || isLongOnline(this.allStatuses()[a.id]?.serveur)
     );
 
     const col = this.sortCol();
