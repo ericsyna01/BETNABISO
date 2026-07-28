@@ -84,9 +84,11 @@ interface NavEntry extends NavItem {
     .sidebar {
       width: var(--sidebar-width);
       height: 100vh;
+      height: 100dvh;
       background: linear-gradient(180deg, #000000 0%, #1a1409 100%);
       display: flex;
       flex-direction: column;
+      overflow: hidden;
       position: fixed;
       left: 0;
       top: 0;
@@ -108,6 +110,7 @@ interface NavEntry extends NavItem {
         width: min(280px, 85vw);
         top: var(--header-height);
         height: calc(100vh - var(--header-height));
+        height: calc(100dvh - var(--header-height));
         transform: translateX(-100%);
         z-index: 200;
         &.open { transform: translateX(0); }
@@ -240,6 +243,7 @@ interface NavEntry extends NavItem {
       font-size: 11px;
       color: rgba(255,255,255,0.5);
       font-weight: 500;
+      flex-shrink: 0;
     }
 
     .online-pulse {
@@ -263,6 +267,7 @@ interface NavEntry extends NavItem {
       gap: 10px;
       padding: 14px 16px;
       border-top: 1px solid rgba(212,175,55,0.14);
+      flex-shrink: 0;
     }
 
     .avatar-online-wrap {
@@ -379,6 +384,7 @@ export class SidebarComponent {
     { label: 'Carte techniciens',        icon: 'map',                 route: '/geomap',             roles: ['superadmin', 'admin'],           group: 'ADMINISTRATION' },
 { label: 'Missions internes',        icon: 'assignment_ind',      route: '/missions',           roles: ['superadmin', 'admin', 'technicien', 'chauffeur'], group: 'ADMINISTRATION' },
     /* Aide */
+    { label: 'Outils & Utilitaires',      icon: 'construction',        route: '/outils',             group: 'AIDE' },
     { label: 'Documentation',            icon: 'menu_book',           route: '/docs',               group: 'AIDE' },
   ];
 

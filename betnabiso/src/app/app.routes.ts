@@ -121,6 +121,10 @@ export const routes: Routes = [
         canActivate: [roleGuard], data: { roles: ['superadmin', 'admin', 'technicien', 'chauffeur'] }
       },
       {
+        path: 'outils',
+        loadComponent: () => import('./features/outils/outils.component').then(m => m.OutilsComponent)
+      },
+      {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent)
       },

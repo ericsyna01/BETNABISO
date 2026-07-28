@@ -32,6 +32,12 @@ import { ZoneService } from '../../../core/services/zone.service';
           <mat-card-title>{{ isEdit() ? "Informations de l'agent" : "Enregistrer un nouvel agent" }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (!isEdit() && lastAgent(); as last) {
+            <div class="last-agent-hint">
+              <mat-icon>history</mat-icon>
+              <span>Dernier agent créé : <strong>{{ last.nomAgent }}</strong> ({{ last.zone }})</span>
+            </div>
+          }
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <h3 class="section-title">Identification</h3>
             <div class="form-grid">
@@ -132,6 +138,13 @@ import { ZoneService } from '../../../core/services/zone.service';
   `,
   styles: [`
     .header-with-back { display: flex; align-items: center; gap: 8px; }
+    .last-agent-hint {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+      padding: 10px 14px; background: var(--surface-alt, #f0f4f8); border-radius: 8px;
+      font-size: 13px; color: var(--text-secondary);
+      mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--primary-light); }
+      strong { color: var(--text-primary); font-family: ui-monospace, monospace; }
+    }
     .section-title { font-size: 13px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
     mat-card { max-width: 900px; }
     mat-card-content { padding: 16px 24px 24px !important; }
@@ -151,6 +164,12 @@ export class AgentFormComponent implements OnInit {
   isEdit = signal(false);
   saving = signal(false);
   private agentId = signal<string | null>(null);
+
+  lastAgent = computed(() => {
+    const all = this.agentSvc.getAll();
+    if (!all.length) return null;
+    return [...all].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0];
+  });
 
   form = this.fb.group({
     nomAgent: ['', Validators.required],

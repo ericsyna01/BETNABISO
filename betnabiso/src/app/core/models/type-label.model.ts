@@ -1,4 +1,4 @@
-export type TypeCategorie = 'intervention' | 'mission' | 'panne';
+export type TypeCategorie = 'intervention' | 'mission' | 'panne' | 'outil';
 
 export interface TypeLabel {
   id: string;

@@ -84,8 +84,8 @@ if ($m === 'POST') {
     $b         = body();
     $categorie = trim($b['categorie'] ?? '');
     $label     = trim($b['label'] ?? '');
-    if (!in_array($categorie, ['intervention', 'mission', 'panne'], true) || !$label) {
-        respond(400, ['error' => 'Catégorie (intervention|mission|panne) et label requis']);
+    if (!in_array($categorie, ['intervention', 'mission', 'panne', 'outil'], true) || !$label) {
+        respond(400, ['error' => 'Catégorie (intervention|mission|panne|outil) et label requis']);
     }
     $exists = $db->prepare('SELECT COUNT(*) FROM type_labels WHERE categorie = ? AND LOWER(label) = LOWER(?)');
     $exists->execute([$categorie, $label]);

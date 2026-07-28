@@ -46,6 +46,13 @@ export function formatOnlineSince(iso: string): string {
   return formatMinutesAgo(Math.max(0, minutes));
 }
 
+const HB_LONG_OFFLINE_MIN = 24 * 60;
+
+export function isLongOffline(m: MachineInfo | null | undefined): boolean {
+  if (!m || m.online) return false;
+  return m.minutesAgo >= HB_LONG_OFFLINE_MIN;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HeartbeatService {
   private http = inject(HttpClient);

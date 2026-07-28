@@ -30,6 +30,7 @@ import { TypeLabel, TypeCategorie, TYPE_ICON_PRESETS } from '../../../core/model
         <mat-button-toggle value="intervention"><mat-icon>build</mat-icon> Types d'intervention</mat-button-toggle>
         <mat-button-toggle value="mission"><mat-icon>task_alt</mat-icon> Types de mission</mat-button-toggle>
         <mat-button-toggle value="panne"><mat-icon>report_problem</mat-icon> Types de panne</mat-button-toggle>
+        <mat-button-toggle value="outil"><mat-icon>construction</mat-icon> Catégories d'outils</mat-button-toggle>
       </mat-button-toggle-group>
 
       <!-- Ajout / édition -->
