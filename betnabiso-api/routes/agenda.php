@@ -59,7 +59,7 @@ if ($m === 'POST') {
          VALUES (?, ?, ?, ?, ?, ?, ?)'
     )->execute([
         $newId, $current['user_id'], $titre, $b['note'] ?? null,
-        $b['dateRappel'], $b['heure'] ?? null, false,
+        $b['dateRappel'], $b['heure'] ?? null, 0,
     ]);
     $stmt = $db->prepare('SELECT * FROM agenda WHERE id=?');
     $stmt->execute([$newId]);
@@ -81,7 +81,7 @@ if ($m === 'PUT' && $id) {
     foreach ($strMap as $jsKey => $dbCol) {
         if (array_key_exists($jsKey, $b)) { $fields[] = "$dbCol = ?"; $vals[] = $b[$jsKey]; }
     }
-    if (array_key_exists('fait', $b)) { $fields[] = 'fait = ?'; $vals[] = (bool)$b['fait']; }
+    if (array_key_exists('fait', $b)) { $fields[] = 'fait = ?'; $vals[] = (int)(bool)$b['fait']; }
     if (!$fields) respond(400, ['error' => 'Aucun champ à mettre à jour']);
     $vals[] = $id;
     $db->prepare('UPDATE agenda SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
