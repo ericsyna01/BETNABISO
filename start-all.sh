@@ -16,14 +16,16 @@ echo "  Ctrl+C pour tout arreter"
 echo "============================================"
 echo ""
 
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Demarrer l'API PHP en arriere-plan
-cd "$(dirname "$0")/betnabiso-api"
+cd "$ROOT_DIR/betnabiso-api"
 php -S 0.0.0.0:8888 index.php &
 PHP_PID=$!
 echo "[API] Demarre (PID $PHP_PID)"
 
 # Demarrer Angular
-cd "$(dirname "$0")/betnabiso"
+cd "$ROOT_DIR/betnabiso"
 echo "[Angular] Demarrage..."
 npx ng serve --host 0.0.0.0 --port 4200 &
 NG_PID=$!

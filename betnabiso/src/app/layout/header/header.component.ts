@@ -23,6 +23,7 @@ interface SearchResult {
   label: string;
   sub: string;
   route: string[];
+  queryParams?: Record<string, string>;
 }
 
 @Component({
@@ -91,6 +92,12 @@ interface SearchResult {
         <button mat-icon-button (click)="themeSvc.toggle()" [matTooltip]="themeSvc.dark() ? 'Mode clair' : 'Mode sombre'" class="theme-btn">
           <mat-icon>{{ themeSvc.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
         </button>
+
+        @if (fullscreenSupported) {
+          <button mat-icon-button (click)="toggleFullscreen()" [matTooltip]="isFullscreen() ? 'Quitter le plein écran' : 'Plein écran'" class="fullscreen-btn">
+            <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+          </button>
+        }
 
         <div class="chat-btn-wrap">
           <button mat-icon-button (click)="chatUi.toggle()" matTooltip="Messages">
@@ -295,6 +302,19 @@ interface SearchResult {
     @media (max-width: 640px) {
       .search-wrap { max-width: 160px; }
       .search-input { font-size: 12px; }
+      /* Le champ se réduit fortement en mobile ; le panneau de résultats
+         doit rester lisible, donc il se détache de la largeur du champ
+         plutôt que d'hériter de son left:0/right:0 étriqué. */
+      .search-dropdown {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        top: calc(var(--header-height) + 6px);
+        max-height: calc(100vh - var(--header-height) - 16px);
+      }
+    }
+    @media (max-width: 400px) {
+      .search-wrap { max-width: 64px; margin-left: 4px; }
     }
 
     /* ── Droite ── */
@@ -302,6 +322,11 @@ interface SearchResult {
       display: flex;
       align-items: center;
       gap: 4px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 400px) {
+      .header-right { gap: 0; }
+      .theme-btn, .fullscreen-btn, .chat-btn-wrap button, app-notifications-bell ::ng-deep button { width: 36px; height: 36px; }
     }
 
     /* ── Chat trigger ── */
@@ -376,6 +401,11 @@ interface SearchResult {
     @media (max-width: 600px) {
       .user-info-header { display: none; }
       .chevron-icon { display: none; }
+    }
+    @media (max-width: 400px) {
+      .user-btn.mat-mdc-button-base { padding: 0; gap: 0; min-width: 0 !important; }
+      .header { padding-right: 2px; }
+      .avatar { width: 30px; height: 30px; font-size: 11px; }
     }
 
     /* ── Dropdown menu ── */
@@ -469,13 +499,27 @@ export class HeaderComponent implements OnInit, OnDestroy {
   clockDate = signal('');
   private clockTimer: ReturnType<typeof setInterval> | null = null;
 
+  fullscreenSupported = !!document.documentElement.requestFullscreen;
+  isFullscreen = signal(!!document.fullscreenElement);
+  private onFullscreenChange = () => this.isFullscreen.set(!!document.fullscreenElement);
+
   ngOnInit(): void {
     this.updateClock();
     this.clockTimer = setInterval(() => this.updateClock(), 1000);
+    document.addEventListener('fullscreenchange', this.onFullscreenChange);
   }
 
   ngOnDestroy(): void {
     if (this.clockTimer) clearInterval(this.clockTimer);
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
+  }
+
+  toggleFullscreen(): void {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
   }
 
   private updateClock(): void {
@@ -517,7 +561,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
         type: 'intervention', id: i.id,
         label: i.agentNom,
         sub: `${i.type} · ${i.statut} · ${i.technicienNom}`,
-        route: ['/interventions']
+        route: ['/interventions'],
+        queryParams: { id: i.id }
       }));
 
     const missions = this.missionSvc.getAll()
@@ -538,7 +583,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   });
 
   navigate(r: SearchResult): void {
-    this.router.navigate(r.route);
+    this.router.navigate(r.route, { queryParams: r.queryParams ?? {} });
     this.clearSearch();
   }
 

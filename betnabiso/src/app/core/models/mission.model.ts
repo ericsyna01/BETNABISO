@@ -10,6 +10,8 @@ export interface Mission {
   priorite: 'Haute' | 'Normale' | 'Basse';
   assignedToId: string;
   assignedToNom: string;
+  assignedToId2?: string;
+  assignedToNom2?: string;
   assignedById: string;
   assignedByNom: string;
   dateMission: string;

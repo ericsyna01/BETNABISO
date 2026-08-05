@@ -212,11 +212,11 @@ interface EscaladeItem { id: string; agentNom: string; agentZone: string; statut
           </div>
           <div class="lg-item">
             <span class="lg-num">{{ interventionStats().total }}</span>
-            <span class="lg-label">Interventions totales</span>
+            <span class="lg-label">Interventions ce mois</span>
           </div>
           <div class="lg-item">
             <span class="lg-num">{{ interventionStats().enCours }}</span>
-            <span class="lg-label">En cours</span>
+            <span class="lg-label">En cours ce mois</span>
           </div>
         </div>
 
@@ -736,7 +736,7 @@ export class DashboardComponent implements OnInit {
     return 'Bonsoir';
   });
   agentStats = computed(() => this.agentSvc.getStats());
-  interventionStats = computed(() => this.interventionSvc.getStats());
+  interventionStats = computed(() => this.interventionSvc.getStatsThisMonth());
 
   recentInterventions = computed<Intervention[]>(() =>
     this.interventionSvc.getAll()

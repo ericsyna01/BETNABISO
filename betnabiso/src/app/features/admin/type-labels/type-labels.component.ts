@@ -113,7 +113,7 @@ import { TypeLabel, TypeCategorie, TYPE_ICON_PRESETS } from '../../../core/model
   `,
   styles: [`
     .types-page { display: flex; flex-direction: column; gap: 20px; padding-top: 16px; }
-    .cat-toggle { align-self: flex-start; }
+    .cat-toggle { align-self: flex-start; max-width: 100%; overflow-x: auto; }
 
     .add-card mat-card-header { padding: 12px 16px 0 !important; }
     .add-card mat-card-content { padding: 12px 16px 16px !important; }

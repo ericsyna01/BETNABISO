@@ -2,8 +2,17 @@ import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { NotificationService } from '../../core/services/notification.service';
+import { MissionService } from '../../core/services/mission.service';
+import { InterventionService } from '../../core/services/intervention.service';
 import { AuthService } from '../../core/services/auth.service';
-import { AgentNotif } from '../../core/models/notification.model';
+
+interface TickerItem {
+  id: string;
+  icon: string;
+  label: string;
+  route: string[];
+  queryParams?: Record<string, string>;
+}
 
 @Component({
   selector: 'app-requests-ticker',
@@ -13,21 +22,23 @@ import { AgentNotif } from '../../core/models/notification.model';
     @if (visible()) {
       <div class="ticker-bar">
         <div class="ticker-label">
-          <mat-icon>campaign</mat-icon> {{ items().length }} demande(s) en attente
+          <mat-icon>campaign</mat-icon>
+          <span class="ticker-count">{{ items().length }}</span>
+          <span class="ticker-label-text">demande(s) en attente</span>
         </div>
         <div class="ticker-track">
           <div class="ticker-content">
             @for (n of items(); track n.id) {
               <span class="ticker-item" (click)="goTo(n)">
-                <mat-icon>{{ icon(n) }}</mat-icon>
-                {{ label(n) }}
+                <mat-icon>{{ n.icon }}</mat-icon>
+                {{ n.label }}
               </span>
             }
             <!-- copie dupliquée pour une boucle continue sans coupure -->
             @for (n of items(); track 'dup-' + n.id) {
               <span class="ticker-item" (click)="goTo(n)" aria-hidden="true">
-                <mat-icon>{{ icon(n) }}</mat-icon>
-                {{ label(n) }}
+                <mat-icon>{{ n.icon }}</mat-icon>
+                {{ n.label }}
               </span>
             }
           </div>
@@ -67,36 +78,74 @@ import { AgentNotif } from '../../core/models/notification.model';
       .ticker-content { animation: none; }
       .ticker-track { overflow-x: auto; }
     }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      .ticker-bar { height: 30px; }
+      .ticker-label {
+        gap: 4px; padding: 0 8px; font-size: 11px;
+        mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      }
+      .ticker-label-text { display: none; }
+      .ticker-content { gap: 24px; height: 30px; animation-duration: 22s; }
+      .ticker-item {
+        font-size: 11.5px; gap: 4px;
+        mat-icon { font-size: 13px; width: 13px; height: 13px; }
+      }
+    }
   `]
 })
 export class RequestsTickerComponent {
-  private notifSvc = inject(NotificationService);
-  private router    = inject(Router);
+  private notifSvc        = inject(NotificationService);
+  private missionSvc      = inject(MissionService);
+  private interventionSvc = inject(InterventionService);
+  private router          = inject(Router);
   auth = inject(AuthService);
 
-  items = computed(() => {
-    if (!this.auth.isAdmin() && !this.auth.isSuperadmin()) return [];
-    return this.notifSvc.getAll().filter(n =>
-      (n.type === 'agent_modification' || n.type === 'deplacement_requis') && n.statut !== 'traitée'
-    );
+  items = computed<TickerItem[]>(() => {
+    const isAdmin = this.auth.isAdmin() || this.auth.isSuperadmin();
+    const userId  = this.auth.currentUser()?.id;
+
+    const demandes: TickerItem[] = isAdmin
+      ? this.notifSvc.getAll()
+          .filter(n => (n.type === 'agent_modification' || n.type === 'deplacement_requis') && n.statut !== 'traitée')
+          .map(n => ({
+            id: 'notif-' + n.id,
+            icon: n.type === 'deplacement_requis' ? 'directions_car' : 'edit_note',
+            label: `${n.requestedByNom ? n.requestedByNom + ' — ' : ''}${n.message}`,
+            route: n.type === 'agent_modification' && n.agentId ? ['/agents', n.agentId] : ['/support'],
+          }))
+      : [];
+
+    const missions: TickerItem[] = this.missionSvc.getAll()
+      .filter(m => m.statut === 'assignée' && m.assignedById !== userId && (isAdmin || m.assignedToId === userId || m.assignedToId2 === userId))
+      .map(m => ({
+        id: 'mission-' + m.id,
+        icon: 'assignment_ind',
+        label: isAdmin
+          ? `Nouvelle mission : ${m.titre} — ${m.assignedToNom}${m.assignedToNom2 ? ' + ' + m.assignedToNom2 : ''}`
+          : `Nouvelle mission qui vous est assignée : ${m.titre}`,
+        route: ['/missions'],
+      }));
+
+    const interventions: TickerItem[] = this.interventionSvc.getAll()
+      .filter(i => i.statut === 'Assignée' && i.assignedById !== userId && (isAdmin || i.technicienId === userId))
+      .map(i => ({
+        id: 'interv-' + i.id,
+        icon: 'assignment',
+        label: isAdmin
+          ? `Nouvelle intervention : ${i.type} — ${i.agentNom} — ${i.technicienNom}`
+          : `Nouvelle intervention qui vous est assignée : ${i.type} — ${i.agentNom}`,
+        route: ['/interventions'],
+        queryParams: { id: i.id },
+      }));
+
+    return [...demandes, ...missions, ...interventions];
   });
 
   visible = computed(() => this.items().length > 0);
 
-  icon(n: AgentNotif): string {
-    return n.type === 'deplacement_requis' ? 'directions_car' : 'edit_note';
-  }
-
-  label(n: AgentNotif): string {
-    const who = n.requestedByNom ? `${n.requestedByNom} — ` : '';
-    return `${who}${n.message}`;
-  }
-
-  goTo(n: AgentNotif): void {
-    if (n.type === 'agent_modification' && n.agentId) {
-      this.router.navigate(['/agents', n.agentId]);
-    } else if (n.type === 'deplacement_requis') {
-      this.router.navigate(['/support']);
-    }
+  goTo(item: TickerItem): void {
+    this.router.navigate(item.route, { queryParams: item.queryParams ?? {} });
   }
 }

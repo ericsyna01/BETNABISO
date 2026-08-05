@@ -21,7 +21,7 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="page-container">
       <div class="page-header"><h1>Mon profil</h1></div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px">
+      <div class="profile-grid">
         <!-- Infos profil -->
         <mat-card>
           <mat-card-header>
@@ -88,6 +88,10 @@ import { AuthService } from '../../core/services/auth.service';
     </div>
   `,
   styles: [`
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 800px; }
+    @media (max-width: 720px) {
+      .profile-grid { grid-template-columns: 1fr; }
+    }
     .big-avatar { width: 56px; height: 56px; background: linear-gradient(135deg,#1a3a5c,#2a5fa0); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; margin-right: 12px; flex-shrink: 0; }
     mat-card-header { display: flex !important; align-items: center; padding: 16px 16px 0 !important; }
     mat-card-content { padding: 12px 16px 16px !important; }

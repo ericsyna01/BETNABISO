@@ -121,6 +121,19 @@ export class InterventionService {
     };
   }
 
+  getStatsThisMonth(): { total: number; enCours: number; terminees: number; echecs: number; enAttente: number } {
+    const now = new Date();
+    const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const items = this._data().filter(i => i.dateDebut.startsWith(prefix));
+    return {
+      total:     items.length,
+      enCours:   items.filter(i => i.statut === 'En cours').length,
+      terminees: items.filter(i => i.statut === 'Terminée').length,
+      echecs:    items.filter(i => i.statut === 'Échec').length,
+      enAttente: items.filter(i => i.statut === 'Assignée').length,
+    };
+  }
+
   getMonthlyStats(technicienId: string, year: number, month: number): {
     total: number; terminees: number; enCours: number; assignees: number; echecs: number;
   } {

@@ -38,6 +38,7 @@ match ($resource) {
     'creneaux'      => require __DIR__ . '/routes/creneaux.php',
     'type-labels'   => require __DIR__ . '/routes/type-labels.php',
     'outils'        => require __DIR__ . '/routes/outils.php',
+    'agenda'        => require __DIR__ . '/routes/agenda.php',
     'sse'           => require __DIR__ . '/sse.php',
     default         => respond(404, ['error' => 'Ressource non trouvée']),
 };

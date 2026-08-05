@@ -572,8 +572,23 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
     return { terminees, echecs, avgDuree };
   });
 
+  private paramSub: Subscription | null = null;
+
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id')!;
+    // Abonnement (et non snapshot) : la recherche globale et les liens agent→agent
+    // naviguent entre deux routes /agents/:id qui réutilisent la même instance de
+    // composant, donc ngOnInit ne se redéclenche pas — sans ça la fiche affichée
+    // ne changeait jamais après un premier chargement.
+    this.paramSub = this.route.paramMap.subscribe(params => {
+      const id = params.get('id')!;
+      this.loadAgent(id);
+    });
+  }
+
+  private loadAgent(id: string): void {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.sseSub?.unsubscribe();
+
     this.agent.set(this.agentSvc.getById(id));
     this.interventions.set(this.interventionSvc.getByAgent(id));
     this.loadStatus(id);
@@ -586,6 +601,7 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.sseSub?.unsubscribe();
+    this.paramSub?.unsubscribe();
   }
 
   private async loadStatus(id: string): Promise<void> {

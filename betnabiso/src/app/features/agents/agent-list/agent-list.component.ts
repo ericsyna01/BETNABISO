@@ -578,6 +578,8 @@ export class RedeploiementDialogComponent {
     .statut-cell { display: flex; flex-direction: column; gap: 2px; }
     .redeploie-vers { font-size: 11px; color: #1565c0; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; cursor: default; }
 
+    .table-container { overflow-x: auto; }
+
     /* ── Cartes agents (mobile) ── */
     .agent-cards { display: none; }
     @media (max-width: 640px) {

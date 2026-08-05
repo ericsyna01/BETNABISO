@@ -2,7 +2,6 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { PresenceService } from '../../core/services/presence.service';
 import { LayoutService } from '../../core/services/layout.service';
@@ -24,7 +23,7 @@ interface NavEntry extends NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule],
   template: `
     <aside class="sidebar" [class.open]="layoutSvc.sidebarOpen()">
       <div class="sidebar-logo" (click)="refresh()" style="cursor:pointer">
@@ -44,7 +43,6 @@ interface NavEntry extends NavItem {
             <div class="nav-group-label">{{ item.group }}</div>
           }
           <a class="nav-item" [routerLink]="item.route" routerLinkActive="active"
-             [matTooltip]="item.label" matTooltipPosition="right"
              (click)="layoutSvc.close()">
             <mat-icon>{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
@@ -160,6 +158,7 @@ interface NavEntry extends NavItem {
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
+      touch-action: pan-y;
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -365,6 +364,7 @@ export class SidebarComponent {
   private navItems: NavItem[] = [
     { label: 'Tableau de bord',          icon: 'dashboard',           route: '/dashboard',         group: 'GÉNÉRAL' },
     { label: 'Agents',                   icon: 'people',              route: '/agents',             group: 'GÉNÉRAL' },
+    { label: 'Mon agenda',               icon: 'event_note',          route: '/agenda',             group: 'GÉNÉRAL' },
     /* Support */
     { label: 'Affectations',             icon: 'task_alt',            route: '/support',            roles: ['support', 'superadmin', 'admin'], group: 'INTERVENTIONS' },
     { label: 'Affecter',                 icon: 'add_task',            route: '/support/assign',     roles: ['support', 'superadmin', 'admin'], group: 'INTERVENTIONS' },

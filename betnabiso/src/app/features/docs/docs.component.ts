@@ -54,7 +54,7 @@ interface RoleDoc {
     <div class="hero-meta">
       <span class="meta-chip"><mat-icon>people</mat-icon> 4 profils</span>
       <span class="meta-chip"><mat-icon>article</mat-icon> Guide complet</span>
-      <span class="meta-chip"><mat-icon>new_releases</mat-icon> v2 — Juin 2026</span>
+      <span class="meta-chip"><mat-icon>new_releases</mat-icon> Mise à jour — Juillet 2026</span>
     </div>
   </div>
 
@@ -388,11 +388,11 @@ export class DocsComponent {
     // ══════════════════════════════════════════════════════════════
     {
       role: 'nouveautes',
-      label: 'Nouveautés v2',
+      label: 'Nouveautés',
       icon: 'new_releases',
       color: '#00695c',
       bgColor: '#e0f2f1',
-      description: 'Cette section présente toutes les nouvelles fonctionnalités ajoutées à la plateforme BETNABISO v2 : interface améliorée, navigation clavier, vue Kanban, import CSV, export PDF réel, PWA et bien plus encore.',
+      description: 'Cette section présente toutes les nouvelles fonctionnalités ajoutées à la plateforme BETNABISO : interface améliorée, navigation clavier, vue Kanban, import CSV, export PDF réel, PWA, agenda personnel, missions en binôme et bien plus encore.',
       sections: [
         {
           id: 'nv-interface',
@@ -620,6 +620,90 @@ export class DocsComponent {
           tips: [
             'L\'indicateur est visible dans la boîte de dialogue « Affecter technicien ».',
             'Privilégier les techniciens dont la barre est verte pour une répartition équitable de la charge.',
+          ]
+        },
+
+        // ── Juillet 2026 ──────────────────────────────────────────
+        {
+          id: 'nv-agenda',
+          icon: 'event_note',
+          title: 'Mon agenda (rappels personnels)',
+          content: 'Chaque profil dispose désormais d\'un <strong>agenda personnel</strong> — accessible via « Mon agenda » dans le menu — pour noter des tâches ou rappels futurs sans les oublier. Ces rappels sont strictement privés : personne d\'autre, y compris les administrateurs, ne peut les consulter.',
+          steps: [
+            { icon: 'add', title: 'Créer un rappel', detail: 'Menu → « Mon agenda » → renseigner un titre, une date, une heure (optionnelle) et une note → « Ajouter ».' },
+            { icon: 'check_circle', title: 'Marquer comme fait', detail: 'Cocher la case à gauche du rappel pour le classer dans « Terminés ».' },
+            { icon: 'edit', title: 'Modifier ou supprimer', detail: 'Icônes crayon / corbeille sur chaque rappel.' },
+          ],
+          tips: [
+            'Les rappels sont automatiquement classés en « En retard », « Aujourd\'hui », « À venir » et « Terminés ».',
+            'Un rappel visible uniquement par vous est idéal pour un suivi personnel qui ne concerne pas le reste de l\'équipe.',
+          ]
+        },
+        {
+          id: 'nv-mission-binome',
+          icon: 'group_add',
+          title: 'Missions internes en binôme',
+          content: 'Une mission interne peut désormais être confiée à <strong>deux personnes en même temps</strong> (un coéquipier optionnel), pour les tâches qui nécessitent d\'être réalisées à deux.',
+          steps: [
+            { icon: 'add_task', title: 'Confier une mission', detail: 'Missions internes → « Nouvelle mission » → choisir l\'agent principal, puis optionnellement un « Coéquipier » dans le second menu déroulant.' },
+            { icon: 'notifications', title: 'Notification des deux agents', detail: 'L\'agent principal et le coéquipier reçoivent chacun une notification de mission assignée.' },
+          ],
+          tips: [
+            'Le coéquipier apparaît avec un « + Nom » à côté du technicien principal dans la liste des missions.',
+            'Le retrait du coéquipier lors d\'une modification est possible en sélectionnant « Aucun ».',
+          ]
+        },
+        {
+          id: 'nv-mission-edit',
+          icon: 'edit',
+          title: 'Modification d\'une mission interne',
+          content: 'Un administrateur peut désormais <strong>modifier les détails</strong> d\'une mission déjà créée (titre, description, type, priorité, agent, coéquipier, date) via le menu d\'actions.',
+          steps: [
+            { icon: 'more_vert', title: 'Ouvrir le menu d\'actions', detail: 'Missions internes → icône ⋮ sur la ligne de la mission → « Modifier ».' },
+            { icon: 'save', title: 'Enregistrer', detail: 'Ajuster les champs souhaités → « Enregistrer ».' },
+          ],
+          warnings: [
+            'Une mission au statut <strong>« Terminée »</strong> ne peut plus être modifiée — l\'option « Modifier » n\'apparaît plus dans le menu une fois la mission clôturée.',
+          ]
+        },
+        {
+          id: 'nv-ticker',
+          icon: 'campaign',
+          title: 'Bandeau défilant enrichi',
+          content: 'Le bandeau défilant en haut de l\'écran (visible par les administrateurs et, pour leurs propres tâches, par les autres profils) affiche désormais, en plus des demandes de modification, les <strong>nouvelles missions internes</strong> et <strong>nouvelles interventions</strong> assignées.',
+          tips: [
+            'Un administrateur ne voit pas dans le bandeau les missions ou interventions qu\'il vient lui-même de créer/assigner — seulement celles émises par quelqu\'un d\'autre.',
+            'Un technicien, support ou chauffeur voit désormais dans ce bandeau ses propres missions et interventions nouvellement assignées.',
+            'Cliquer sur un élément du bandeau ouvre directement la page concernée.',
+            'Le bandeau est adapté à l\'écran mobile : affichage compact, seul le compteur reste visible sur petit écran.',
+          ]
+        },
+        {
+          id: 'nv-history-missions',
+          icon: 'history',
+          title: 'Historique : missions internes intégrées',
+          content: 'La page Historique & Rapports dispose d\'un nouvel onglet <strong>« Missions internes »</strong> avec ses propres filtres (dates, technicien, type, statut), un tableau triable, l\'export CSV, et une colonne « Missions » ajoutée aux statistiques par technicien.',
+        },
+        {
+          id: 'nv-dashboard-monthly',
+          icon: 'calendar_today',
+          title: 'Tableau de bord : statistiques du mois en cours',
+          content: 'Les cartes KPI « Interventions » du tableau de bord affichent désormais les chiffres du <strong>mois en cours</strong> plutôt que le cumul depuis toujours, pour un suivi plus pertinent de l\'activité récente.',
+        },
+        {
+          id: 'nv-last-agent',
+          icon: 'tips_and_updates',
+          title: 'Suggestion du dernier agent créé',
+          content: 'Lors de la création d\'un nouvel agent, un bandeau rappelle le <strong>nom et la date</strong> du dernier agent enregistré, pour aider à respecter la convention de nommage sans avoir à consulter la liste complète.',
+        },
+        {
+          id: 'nv-outils-categories',
+          icon: 'construction',
+          title: 'Outils & Utilitaires : catégories paramétrables',
+          content: 'Les logiciels et fichiers de la page « Outils & Utilitaires » peuvent désormais être classés par <strong>catégorie</strong> (paramétrable dans Administration → Types). La taille maximale des fichiers hébergés est passée à <strong>100 Mo</strong>.',
+          tips: [
+            'Les catégories s\'affichent en filtres cliquables en haut de la page Outils.',
+            'Gérer les catégories : Administration → « Types » → onglet « Catégories d\'outils ».',
           ]
         },
       ]

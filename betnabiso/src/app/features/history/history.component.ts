@@ -16,6 +16,8 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { InterventionService } from '../../core/services/intervention.service';
+import { MissionService } from '../../core/services/mission.service';
+import { MissionStatut } from '../../core/models/mission.model';
 import { UserService } from '../../core/services/user.service';
 import { ZoneService } from '../../core/services/zone.service';
 import { ExportService } from '../../core/services/export.service';
@@ -177,6 +179,14 @@ type Period = 'month' | 'trimestre' | 'all';
                         @else { <span class="chip green">0</span> }
                       </td>
                     </ng-container>
+                    <ng-container matColumnDef="missions">
+                      <th mat-header-cell *matHeaderCellDef>Missions</th>
+                      <td mat-cell *matCellDef="let r">
+                        @if (r.missionsTotal > 0) {
+                          <span class="chip blue">{{ r.missionsTerminees }}/{{ r.missionsTotal }}</span>
+                        } @else { <span class="cell-sub">—</span> }
+                      </td>
+                    </ng-container>
                     <tr mat-header-row *matHeaderRowDef="techCols"></tr>
                     <tr mat-row *matRowDef="let row; columns: techCols;"></tr>
                     <tr class="mat-row no-data-row" *matNoDataRow>
@@ -211,6 +221,7 @@ type Period = 'month' | 'trimestre' | 'all';
                           <span class="chip red">{{ r.echecs }} échecs</span>
                           <span class="chip orange">{{ r.enCours }} en cours</span>
                           @if (r.reassignes > 0) { <span class="chip red">{{ r.reassignes }} réaffect. subies</span> }
+                          @if (r.missionsTotal > 0) { <span class="chip blue">{{ r.missionsTerminees }}/{{ r.missionsTotal }} missions</span> }
                         </div>
                         @if (r.total > 0) {
                           <div class="progress-container">
@@ -721,6 +732,164 @@ type Period = 'month' | 'trimestre' | 'all';
           </div>
         </mat-tab>
 
+        <!-- ─────── TAB 4 : MISSIONS INTERNES ─────── -->
+        <mat-tab label="Missions internes">
+          <div class="tab-content">
+
+            <!-- Stats résumé -->
+            <div class="stats-grid">
+              <div class="stat-card blue">
+                <div class="stat-icon"><mat-icon>assignment_ind</mat-icon></div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ filteredMissions().length }}</div>
+                  <div class="stat-label">Missions filtrées</div>
+                </div>
+              </div>
+              <div class="stat-card green">
+                <div class="stat-icon"><mat-icon>check_circle</mat-icon></div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ countMissionsByStatut('terminée') }}</div>
+                  <div class="stat-label">Terminées</div>
+                </div>
+              </div>
+              <div class="stat-card orange">
+                <div class="stat-icon"><mat-icon>pending</mat-icon></div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ countMissionsByStatut('en_cours') + countMissionsByStatut('acceptée') + countMissionsByStatut('assignée') }}</div>
+                  <div class="stat-label">En attente / en cours</div>
+                </div>
+              </div>
+              <div class="stat-card error">
+                <div class="stat-icon"><mat-icon>cancel</mat-icon></div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ countMissionsByStatut('refusée') }}</div>
+                  <div class="stat-label">Refusées</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtres -->
+            <mat-card class="filter-card">
+              <mat-card-header><mat-card-title><mat-icon>filter_list</mat-icon> Filtres</mat-card-title></mat-card-header>
+              <mat-card-content>
+                <div class="filter-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Date début</mat-label>
+                    <mat-icon matPrefix>date_range</mat-icon>
+                    <input matInput [matDatepicker]="mPickerDebut" [(ngModel)]="mPickerDebut" placeholder="jj/mm/aaaa">
+                    <mat-datepicker-toggle matIconSuffix [for]="mPickerDebut"></mat-datepicker-toggle>
+                    <mat-datepicker #mPickerDebut></mat-datepicker>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Date fin</mat-label>
+                    <mat-icon matPrefix>date_range</mat-icon>
+                    <input matInput [matDatepicker]="mPickerFin" [(ngModel)]="mPickerFin" placeholder="jj/mm/aaaa">
+                    <mat-datepicker-toggle matIconSuffix [for]="mPickerFin"></mat-datepicker-toggle>
+                    <mat-datepicker #mPickerFin></mat-datepicker>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Technicien</mat-label>
+                    <mat-select [(ngModel)]="mf.technicienId">
+                      <mat-option value="">Tous</mat-option>
+                      @for (t of techniciens(); track t.id) {
+                        <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Type</mat-label>
+                    <mat-select [(ngModel)]="mf.type">
+                      <mat-option value="">Tous</mat-option>
+                      @for (t of missionTypes(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Statut</mat-label>
+                    <mat-select [(ngModel)]="mf.statut">
+                      <mat-option value="">Tous</mat-option>
+                      <mat-option value="assignée">Assignée</mat-option>
+                      <mat-option value="acceptée">Acceptée</mat-option>
+                      <mat-option value="en_cours">En cours</mat-option>
+                      <mat-option value="terminée">Terminée</mat-option>
+                      <mat-option value="refusée">Refusée</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="filter-actions">
+                  <button mat-stroked-button (click)="resetMissionFilters()"><mat-icon>clear</mat-icon> Réinitialiser</button>
+                  <button mat-raised-button color="primary" (click)="applyMissionFilters()"><mat-icon>search</mat-icon> Appliquer</button>
+                  <button mat-stroked-button (click)="exportMissionsCsv()"><mat-icon>table_view</mat-icon> CSV</button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Liste détaillée -->
+            <mat-card>
+              <mat-card-header><mat-card-title>Liste détaillée ({{ filteredMissions().length }})</mat-card-title></mat-card-header>
+              <mat-card-content style="padding:0">
+                <div class="table-container" style="border-radius:0;box-shadow:none">
+                  <table mat-table [dataSource]="filteredMissions()">
+                    <ng-container matColumnDef="date">
+                      <th mat-header-cell *matHeaderCellDef class="sortable-th" (click)="sortMissions('date')">
+                        <div class="th-inner">Date <mat-icon class="sort-icon" [class.sort-active]="missionSortField()==='date'">{{ missionSortIcon('date') }}</mat-icon></div>
+                      </th>
+                      <td mat-cell *matCellDef="let m">{{ m.dateMission | date:'dd/MM/yy' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="titre">
+                      <th mat-header-cell *matHeaderCellDef class="sortable-th" (click)="sortMissions('titre')">
+                        <div class="th-inner">Titre <mat-icon class="sort-icon" [class.sort-active]="missionSortField()==='titre'">{{ missionSortIcon('titre') }}</mat-icon></div>
+                      </th>
+                      <td mat-cell *matCellDef="let m">{{ m.titre }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="type">
+                      <th mat-header-cell *matHeaderCellDef class="sortable-th" (click)="sortMissions('type')">
+                        <div class="th-inner">Type <mat-icon class="sort-icon" [class.sort-active]="missionSortField()==='type'">{{ missionSortIcon('type') }}</mat-icon></div>
+                      </th>
+                      <td mat-cell *matCellDef="let m">{{ m.type }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="technicien">
+                      <th mat-header-cell *matHeaderCellDef class="sortable-th" (click)="sortMissions('technicien')">
+                        <div class="th-inner">Technicien(s) <mat-icon class="sort-icon" [class.sort-active]="missionSortField()==='technicien'">{{ missionSortIcon('technicien') }}</mat-icon></div>
+                      </th>
+                      <td mat-cell *matCellDef="let m">{{ m.assignedToNom }}{{ m.assignedToNom2 ? ' + ' + m.assignedToNom2 : '' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="confiepar">
+                      <th mat-header-cell *matHeaderCellDef>Confié par</th>
+                      <td mat-cell *matCellDef="let m">{{ m.assignedByNom }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="statut">
+                      <th mat-header-cell *matHeaderCellDef class="sortable-th" (click)="sortMissions('statut')">
+                        <div class="th-inner">Statut <mat-icon class="sort-icon" [class.sort-active]="missionSortField()==='statut'">{{ missionSortIcon('statut') }}</mat-icon></div>
+                      </th>
+                      <td mat-cell *matCellDef="let m"><span class="status-chip {{ mClass(m.statut) }}">{{ mLabel(m.statut) }}</span></td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="missionCols"></tr>
+                    <tr mat-row *matRowDef="let row; columns: missionCols;"></tr>
+                  </table>
+
+                  <!-- Cartes (mobile) -->
+                  <div class="hx-cards">
+                    @for (m of filteredMissions(); track m.id) {
+                      <div class="hx-card">
+                        <div class="hx-top">
+                          <div class="cell-name">{{ m.titre }}</div>
+                          <span class="status-chip {{ mClass(m.statut) }}">{{ mLabel(m.statut) }}</span>
+                        </div>
+                        <div class="cell-sub">{{ m.type }} · Confié par {{ m.assignedByNom }}</div>
+                        <div class="hx-line"><span>{{ m.dateMission | date:'dd/MM/yy' }}</span><span>{{ m.assignedToNom }}{{ m.assignedToNom2 ? ' + ' + m.assignedToNom2 : '' }}</span></div>
+                      </div>
+                    }
+                  </div>
+                  @if (filteredMissions().length === 0) {
+                    <div class="empty-state"><mat-icon>search_off</mat-icon><h3>Aucun résultat</h3><p>Modifiez les filtres</p></div>
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     </div>
   `,
@@ -828,15 +997,20 @@ type Period = 'month' | 'trimestre' | 'all';
 
     /* ── Stats résumé ── */
     .stats-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px; @media(max-width:768px){grid-template-columns:repeat(2,1fr);} }
-    .stat-card { display:flex;align-items:center;gap:14px;background:white;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);
+    .stat-card { display:flex;align-items:center;gap:14px;background:white;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);min-width:0;
       &.blue   { border-left:4px solid #1565c0; .stat-icon mat-icon{color:#1565c0;} }
       &.green  { border-left:4px solid #43a047; .stat-icon mat-icon{color:#43a047;} }
       &.orange { border-left:4px solid #fb8c00; .stat-icon mat-icon{color:#fb8c00;} }
       &.purple { border-left:4px solid #8e24aa; .stat-icon mat-icon{color:#8e24aa;} }
+      &.error  { border-left:4px solid #e53935; .stat-icon mat-icon{color:#e53935;} }
     }
     .stat-icon mat-icon { font-size:28px;width:28px;height:28px; }
+    .stat-info { min-width:0; }
     .stat-value { font-size:24px;font-weight:700;color:#1a3a5c;line-height:1; }
-    .stat-label { font-size:11px;color:#78909c;margin-top:2px; }
+    .stat-label { font-size:11px;color:#78909c;margin-top:2px; overflow-wrap:break-word; }
+    @media (max-width: 420px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
 
     /* ── Filtres ── */
     .filter-card { mat-card-header { padding:12px 16px 0; mat-card-title{display:flex;align-items:center;gap:8px;font-size:14px;} } mat-card-content{padding:12px 16px 16px !important;} }
@@ -919,22 +1093,25 @@ type Period = 'month' | 'trimestre' | 'all';
     }
     @media (max-width:480px) {
       .kpi-row { display:grid;grid-template-columns:1fr 1fr; }
+      .kpi-card { min-width:0; }
     }
   `]
 })
 export class HistoryComponent implements OnInit {
   private interventionSvc = inject(InterventionService);
+  private missionSvc      = inject(MissionService);
   private userSvc         = inject(UserService);
   private zoneSvc         = inject(ZoneService);
   private exportSvc       = inject(ExportService);
   private typeSvc         = inject(TypeLabelService);
 
   types = computed(() => this.typeSvc.getByCategorie('intervention'));
+  missionTypes = computed(() => this.typeSvc.getByCategorie('mission'));
   zones = computed(() => this.zoneSvc.getAll());
 
   cols       = ['date', 'agent', 'zone', 'type', 'technicien', 'duree', 'statut'];
   reassCols  = ['date', 'agent', 'from', 'duree', 'to', 'by'];
-  techCols      = ['rang', 'nom', 'total', 'terminees', 'echecs', 'enCours', 'taux', 'dureeMoy', 'typePrincipal', 'reassignes'];
+  techCols      = ['rang', 'nom', 'total', 'terminees', 'echecs', 'enCours', 'taux', 'dureeMoy', 'typePrincipal', 'reassignes', 'missions'];
   supportCols   = ['nom', 'affectations', 'reassignations', 'total'];
   chauffeurCols = ['nom', 'transports', 'zones', 'techs'];
 
@@ -955,6 +1132,15 @@ export class HistoryComponent implements OnInit {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - (p === 'month' ? 30 : 90));
     return all.filter(i => new Date(i.dateDebut) >= cutoff);
+  });
+
+  private periodFilteredMissions = computed(() => {
+    const all = this.missionSvc.getAll();
+    const p = this.period();
+    if (p === 'all') return all;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (p === 'month' ? 30 : 90));
+    return all.filter(m => new Date(m.dateMission) >= cutoff);
   });
 
   // ── KPI ──
@@ -978,6 +1164,7 @@ export class HistoryComponent implements OnInit {
   techStats = computed(() => {
     const interventions = this.periodFiltered();
     const reassigns = this.interventionSvc.getReassignments();
+    const missions = this.periodFilteredMissions();
     const users = this.userSvc.getAll().filter(u => (u.roles ?? [u.role]).includes('technicien'));
     const sorted = users.map(u => {
       const mine      = interventions.filter(i => i.technicienId === u.id);
@@ -990,6 +1177,7 @@ export class HistoryComponent implements OnInit {
       const typeCount: Record<string, number> = {};
       for (const i of mine) typeCount[i.type] = (typeCount[i.type] ?? 0) + 1;
       const typePrincipal = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
+      const mesMissions = missions.filter(m => m.assignedToId === u.id || m.assignedToId2 === u.id);
       return {
         nom: `${u.prenom} ${u.nom}`, zone: u.zone || '—',
         total: mine.length, terminees, echecs, enCours, tauxRaw,
@@ -997,6 +1185,8 @@ export class HistoryComponent implements OnInit {
         dureeMoy: dureeMoy != null ? dureeMoy + ' min' : '—',
         reassignes: reassigns.filter(r => r.fromTechId === u.id).length,
         typePrincipal, rang: 0,
+        missionsTotal: mesMissions.length,
+        missionsTerminees: mesMissions.filter(m => m.statut === 'terminée').length,
       };
     }).sort((a, b) => b.total - a.total || b.terminees - a.terminees);
     sorted.forEach((r, idx) => r.rang = idx + 1);
@@ -1079,6 +1269,96 @@ export class HistoryComponent implements OnInit {
     const with_d = this.filtered().filter(i => i.duree);
     if (!with_d.length) return 0;
     return Math.round(with_d.reduce((a, i) => a + (i.duree ?? 0), 0) / with_d.length);
+  }
+
+  // ── Missions internes (journal) ──
+  missionCols = ['date', 'titre', 'type', 'technicien', 'confiepar', 'statut'];
+  mPickerDebut: Date | null = null;
+  mPickerFin: Date | null = null;
+  mf = { dateDebut: '', dateFin: '', technicienId: '', type: '', statut: '' };
+  private activeMissionFilters = signal({ ...this.mf });
+  missionSortField = signal('date');
+  missionSortDir   = signal<'asc' | 'desc'>('desc');
+
+  sortMissions(field: string): void {
+    if (this.missionSortField() === field) this.missionSortDir.set(this.missionSortDir() === 'asc' ? 'desc' : 'asc');
+    else { this.missionSortField.set(field); this.missionSortDir.set('asc'); }
+  }
+
+  missionSortIcon(field: string): string {
+    if (this.missionSortField() !== field) return 'unfold_more';
+    return this.missionSortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward';
+  }
+
+  filteredMissions = computed(() => {
+    const fil = this.activeMissionFilters();
+    let list = this.missionSvc.getAll().filter(m => {
+      if (fil.dateDebut && m.dateMission < fil.dateDebut) return false;
+      if (fil.dateFin && m.dateMission > fil.dateFin) return false;
+      if (fil.technicienId && m.assignedToId !== fil.technicienId && m.assignedToId2 !== fil.technicienId) return false;
+      if (fil.type && m.type !== fil.type) return false;
+      if (fil.statut && m.statut !== fil.statut) return false;
+      return true;
+    });
+
+    const field = this.missionSortField();
+    const dir   = this.missionSortDir();
+    list = [...list].sort((a, b) => {
+      let cmp = 0;
+      if      (field === 'date')       cmp = a.dateMission.localeCompare(b.dateMission);
+      else if (field === 'titre')      cmp = a.titre.localeCompare(b.titre);
+      else if (field === 'type')       cmp = (a.type ?? '').localeCompare(b.type ?? '');
+      else if (field === 'technicien') cmp = a.assignedToNom.localeCompare(b.assignedToNom);
+      else if (field === 'statut')     cmp = a.statut.localeCompare(b.statut);
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  });
+
+  countMissionsByStatut(s: MissionStatut) { return this.filteredMissions().filter(m => m.statut === s).length; }
+
+  applyMissionFilters() {
+    this.mf.dateDebut = this.toIso(this.mPickerDebut);
+    this.mf.dateFin   = this.toIso(this.mPickerFin);
+    this.activeMissionFilters.set({ ...this.mf });
+  }
+
+  resetMissionFilters() {
+    this.mPickerDebut = null;
+    this.mPickerFin   = null;
+    this.mf = { dateDebut: '', dateFin: '', technicienId: '', type: '', statut: '' };
+    this.activeMissionFilters.set({ ...this.mf });
+  }
+
+  mClass(s: MissionStatut): string {
+    const map: Record<MissionStatut, string> = {
+      'assignée': 'assignee', 'acceptée': 'acceptee', 'en_cours': 'en-cours',
+      'terminée': 'terminee', 'refusée': 'echec',
+    };
+    return map[s] ?? '';
+  }
+
+  mLabel(s: MissionStatut): string {
+    const map: Record<MissionStatut, string> = {
+      'assignée': 'Assignée', 'acceptée': 'Acceptée', 'en_cours': 'En cours',
+      'terminée': 'Terminée', 'refusée': 'Refusée',
+    };
+    return map[s] ?? s;
+  }
+
+  exportMissionsCsv(): void {
+    const cols = [
+      { key: 'dateMission',    label: 'Date' },
+      { key: 'titre',          label: 'Titre' },
+      { key: 'type',           label: 'Type' },
+      { key: 'assignedToNom',  label: 'Technicien' },
+      { key: 'assignedToNom2', label: 'Coéquipier' },
+      { key: 'assignedByNom',  label: 'Confié par' },
+      { key: 'statut',         label: 'Statut' },
+      { key: 'description',    label: 'Description' },
+    ];
+    const rows = this.filteredMissions().map(m => ({ ...m, dateMission: new Date(m.dateMission).toLocaleDateString('fr-FR') }));
+    this.exportSvc.exportCsv(rows as never, `missions_${new Date().toISOString().split('T')[0]}`, cols);
   }
 
   byTechnicien = computed(() => {

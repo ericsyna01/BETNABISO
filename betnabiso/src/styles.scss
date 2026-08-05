@@ -70,6 +70,7 @@ button[mat-icon-button].delete-btn {
   &.redeploye { background: #e3f2fd; color: #0277bd; }
   &.a-redeployer { background: #fff3e0; color: #bf360c; border: 1px solid #ffcc80; font-weight: 700; }
   &.assignee { background: #fff3e0; color: #e65100; }
+  &.acceptee { background: #e3f2fd; color: #1565c0; }
   &.en-cours { background: #e3f2fd; color: #1565c0; }
   &.terminee { background: #e8f5e9; color: #2e7d32; }
   &.echec { background: #fce4ec; color: #c62828; }
@@ -139,6 +140,7 @@ button[mat-icon-button].delete-btn {
   gap: 16px;
   position: relative;
   overflow: hidden;
+  min-width: 0;
   transform: translateZ(0); /* Force GPU layer — fix overflow:hidden + border-radius sur mobile */
   transition: transform 0.2s, box-shadow 0.2s;
   border: 1px solid rgba(255,255,255,0.8);

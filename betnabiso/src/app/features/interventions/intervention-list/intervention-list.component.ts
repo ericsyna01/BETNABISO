@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
@@ -178,6 +178,14 @@ export class DeplacementDialogComponent {
       <!-- Kanban view -->
       @if (viewMode() === 'kanban') {
         <app-kanban></app-kanban>
+      }
+
+      @if (highlightId()) {
+        <div class="highlight-banner">
+          <mat-icon>search</mat-icon>
+          <span>Résultat de recherche — une seule intervention affichée</span>
+          <button mat-button (click)="resetFilters()">Voir toutes les interventions</button>
+        </div>
       }
 
       <!-- Filtres (liste only) -->
@@ -650,6 +658,7 @@ export class DeplacementDialogComponent {
     </div>
   `,
   styles: [`
+    .table-container { overflow-x: auto; }
     .pending-notice { display: flex; align-items: center; gap: 6px; color: #e65100; font-size: 13px; margin-top: 4px; font-weight: 500; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
     .deplacement-notice { display: flex; align-items: center; gap: 6px; color: #6a1b9a; font-size: 13px; margin-top: 4px; font-weight: 500; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
     .view-toggle { display: flex; background: #f0f4f8; border-radius: 8px; padding: 2px;
@@ -675,6 +684,14 @@ export class DeplacementDialogComponent {
     .attach-thumb-mobile { width: 100%; max-height: 130px; object-fit: cover; border-radius: 8px; cursor: pointer; margin-top: 4px; }
     .desc-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
     .result-count { color: var(--text-secondary); font-size: 13px; margin-left: auto; white-space: nowrap; }
+
+    .highlight-banner {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+      padding: 10px 14px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px;
+      font-size: 13px; color: #0d47a1;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      button { margin-left: auto; }
+    }
     .delete-btn { color: #c62828; }
     .assigned-by { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
 
@@ -768,11 +785,20 @@ export class DeplacementDialogComponent {
 })
 export class InterventionListComponent implements OnDestroy {
   auth       = inject(AuthService);
+  private route = inject(ActivatedRoute);
 
   // Tick every second to drive live elapsed-time display
   private now = signal(Date.now());
   private _tick = setInterval(() => this.now.set(Date.now()), 1000);
-  ngOnDestroy() { clearInterval(this._tick); }
+
+  // Arrivée depuis la recherche globale (résultat "Intervention") : affiche
+  // uniquement l'intervention visée au lieu de la liste complète non filtrée.
+  highlightId = signal<string | null>(null);
+  private paramSub = this.route.queryParamMap.subscribe(params => {
+    this.highlightId.set(params.get('id'));
+  });
+
+  ngOnDestroy() { clearInterval(this._tick); this.paramSub.unsubscribe(); }
 
   elapsedTime(i: { dateDebut: string; statut: string }): string {
     if (i.statut !== 'En cours' || !i.dateDebut) return '';
@@ -849,7 +875,7 @@ export class InterventionListComponent implements OnDestroy {
 
   hasFilter = computed(() =>
     !!this.searchQuery() || !!this.filterType() || !!this.filterStatut() || this.filterDeplacement() ||
-    !!this.filterDateFrom() || !!this.filterDateTo()
+    !!this.filterDateFrom() || !!this.filterDateTo() || !!this.highlightId()
   );
 
   resetFilters(): void {
@@ -860,6 +886,7 @@ export class InterventionListComponent implements OnDestroy {
     this.filterDateFrom.set('');
     this.filterDateTo.set('');
     this.sortCol.set('');
+    this.highlightId.set(null);
   }
 
   pendingCount = computed(() => {
@@ -875,6 +902,9 @@ export class InterventionListComponent implements OnDestroy {
   pageIndex = signal(0);
 
   filtered = computed(() => {
+    const hId = this.highlightId();
+    if (hId) return this.interventionSvc.getAll().filter(i => i.id === hId);
+
     let items = this.interventionSvc.getAll();
     if (this.filterDeplacement()) items = items.filter(i => i.deplacementRequis);
     const q = this.searchQuery().toLowerCase().trim();

@@ -404,7 +404,12 @@ import { environment } from '../../../environments/environment';
       }
       .users-col { width: 100%; }
       .chat-panel.with-conversation .users-col { display: none; }
-      .conversation-col { width: 100%; }
+      .chat-panel .conversation-col { display: none; width: 100%; }
+      .chat-panel.with-conversation .conversation-col { display: flex; }
+      /* Placeholder "sélectionnez une conversation" : n'a de sens qu'à
+         côté de la colonne utilisateurs en desktop ; en mobile la liste
+         seule occupe déjà tout l'écran quand rien n'est sélectionné. */
+      .chat-panel .conversation-placeholder { display: none; }
     }
 
     @keyframes slideUp {

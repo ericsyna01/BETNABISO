@@ -218,8 +218,7 @@ function requireAuth(): array {
 }
 
 // ── Anti-bruteforce ───────────────────────────────────────────────────────────
-function getLoginAttempts(PDO $db, string $ip, string $username): array {
-    // Créer la table si elle n'existe pas encore
+function ensureLoginAttemptsTable(PDO $db): void {
     if (DB_DRIVER === 'pgsql') {
         $db->exec("CREATE TABLE IF NOT EXISTS login_attempts (
             id            SERIAL PRIMARY KEY,
@@ -239,6 +238,10 @@ function getLoginAttempts(PDO $db, string $ip, string $username): array {
             last_attempt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         )");
     }
+}
+
+function getLoginAttempts(PDO $db, string $ip, string $username): array {
+    ensureLoginAttemptsTable($db);
     $stmt = $db->prepare(
         'SELECT * FROM login_attempts WHERE ip = ? AND username = ? LIMIT 1'
     );
@@ -264,10 +267,12 @@ function recordFailedLogin(PDO $db, string $ip, string $username): void {
 }
 
 function clearLoginAttempts(PDO $db, string $ip, string $username): void {
+    ensureLoginAttemptsTable($db);
     $db->prepare('DELETE FROM login_attempts WHERE ip = ? AND username = ?')
        ->execute([$ip, $username]);
 }
 
 function clearLoginAttemptsByUsername(PDO $db, string $username): void {
+    ensureLoginAttemptsTable($db);
     $db->prepare('DELETE FROM login_attempts WHERE username = ?')->execute([$username]);
 }

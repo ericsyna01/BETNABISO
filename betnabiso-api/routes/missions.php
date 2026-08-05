@@ -4,10 +4,22 @@ $m       = method();
 $db      = getDB();
 $id      = $GLOBALS['path_id'] ?? param('id');
 
+// Colonnes additives : mission confiée à un binôme (deux personnes).
+if (DB_DRIVER === 'pgsql') {
+    $db->exec('ALTER TABLE missions ADD COLUMN IF NOT EXISTS "assignedToId2" VARCHAR(36)');
+    $db->exec('ALTER TABLE missions ADD COLUMN IF NOT EXISTS "assignedToNom2" VARCHAR(150)');
+} else {
+    foreach (['assignedToId2' => 'VARCHAR(36)', 'assignedToNom2' => 'VARCHAR(150)'] as $col => $def) {
+        $exists = $db->query("SHOW COLUMNS FROM missions LIKE '$col'")->fetch();
+        if (!$exists) $db->exec("ALTER TABLE missions ADD COLUMN \"$col\" $def");
+    }
+}
+
 function fmtMission(array $r): array {
     $r = trimIds($r);
     $map = [
         'assignedtoid'  => 'assignedToId',  'assignedtonom'  => 'assignedToNom',
+        'assignedtoid2' => 'assignedToId2', 'assignedtonom2' => 'assignedToNom2',
         'assignedbyid'  => 'assignedById',  'assignedbynom'  => 'assignedByNom',
         'datemission'   => 'dateMission',   'createdat'      => 'createdAt',
         'completedat'   => 'completedAt',
@@ -25,8 +37,8 @@ if ($m === 'GET') {
     if (in_array($current['role'], ['superadmin','admin'], true)) {
         $stmt = $db->query('SELECT * FROM missions ORDER BY "createdAt" DESC');
     } else {
-        $stmt = $db->prepare('SELECT * FROM missions WHERE "assignedToId"=? ORDER BY "createdAt" DESC');
-        $stmt->execute([$current['user_id']]);
+        $stmt = $db->prepare('SELECT * FROM missions WHERE "assignedToId"=? OR "assignedToId2"=? ORDER BY "createdAt" DESC');
+        $stmt->execute([$current['user_id'], $current['user_id']]);
     }
     respond(200, array_map('fmtMission', $stmt->fetchAll()));
 }
@@ -37,29 +49,32 @@ if ($m === 'POST') {
     $b = body();
     $newId = bin2hex(random_bytes(16));
     $db->prepare(
-        'INSERT INTO missions (id,titre,description,type,priorite,"assignedToId","assignedToNom","assignedById","assignedByNom","dateMission",statut)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+        'INSERT INTO missions (id,titre,description,type,priorite,"assignedToId","assignedToNom","assignedToId2","assignedToNom2","assignedById","assignedByNom","dateMission",statut)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
     )->execute([
         $newId, $b['titre'], $b['description'] ?? null, $b['type'] ?? 'Autre',
         $b['priorite'] ?? 'Normale', $b['assignedToId'], $b['assignedToNom'],
+        $b['assignedToId2'] ?? null, $b['assignedToNom2'] ?? null,
         $current['user_id'], $current['prenom'].' '.$current['nom'],
         $b['dateMission'] ?? date('Y-m-d'), 'assignée',
     ]);
-    // Notification à la personne assignée
+    // Notification à la ou aux personnes assignées
     try {
-        $db->prepare(
-            'INSERT INTO notifications (id, type, "technicienId", "requestedById", "requestedByNom", "requestedByRole", message, statut)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        )->execute([
-            bin2hex(random_bytes(16)),
-            'mission_assignee',
-            $b['assignedToId'],
-            $current['user_id'],
-            $current['prenom'].' '.$current['nom'],
-            $current['role'],
-            'Nouvelle mission : '.($b['titre'] ?? 'Mission'),
-            'non_lue',
-        ]);
+        foreach (array_filter([$b['assignedToId'], $b['assignedToId2'] ?? null]) as $assigneeId) {
+            $db->prepare(
+                'INSERT INTO notifications (id, type, "technicienId", "requestedById", "requestedByNom", "requestedByRole", message, statut)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            )->execute([
+                bin2hex(random_bytes(16)),
+                'mission_assignee',
+                $assigneeId,
+                $current['user_id'],
+                $current['prenom'].' '.$current['nom'],
+                $current['role'],
+                'Nouvelle mission : '.($b['titre'] ?? 'Mission'),
+                'non_lue',
+            ]);
+        }
     } catch (Exception $e) {}
     publishEvent('notifications');
 
@@ -75,14 +90,16 @@ if ($m === 'PATCH' && $id) {
     $statut = $b['statut'] ?? null;
     $notes  = $b['notes']  ?? null;
 
-    /* Technicien peut seulement changer le statut de ses propres missions */
-    $chk = $db->prepare('SELECT "assignedToId" FROM missions WHERE id=?');
+    /* Technicien peut seulement changer le statut de ses propres missions (binôme inclus) */
+    $chk = $db->prepare('SELECT "assignedToId", "assignedToId2" FROM missions WHERE id=?');
     $chk->execute([$id]);
     $row = $chk->fetch();
     if (!$row) respond(404, ['error' => 'Mission introuvable']);
 
-    $assignedId = trim($row['assignedToId'] ?? $row['assignedtoid'] ?? '');
-    $isOwner = $assignedId === trim($current['user_id'] ?? '');
+    $myId = trim($current['user_id'] ?? '');
+    $assignedId  = trim($row['assignedToId']  ?? $row['assignedtoid']  ?? '');
+    $assignedId2 = trim($row['assignedToId2'] ?? $row['assignedtoid2'] ?? '');
+    $isOwner = $assignedId === $myId || ($assignedId2 !== '' && $assignedId2 === $myId);
     $isAdmin = in_array($current['role'], ['superadmin','admin'], true);
     if (!$isOwner && !$isAdmin) respond(403, ['error' => 'Interdit']);
 
@@ -90,6 +107,38 @@ if ($m === 'PATCH' && $id) {
     $db->prepare(
         "UPDATE missions SET statut=?, notes=COALESCE(?,notes), \"completedAt\"=$completedAt WHERE id=?"
     )->execute([$statut, $notes, $id]);
+
+    $stmt = $db->prepare('SELECT * FROM missions WHERE id=?');
+    $stmt->execute([$id]);
+    publishEvent('missions');
+    respond(200, fmtMission($stmt->fetch()));
+}
+
+/* ── PUT : modifier les détails d'une mission (réservé admin) ─────────────── */
+if ($m === 'PUT' && $id) {
+    requireRole(['superadmin','admin'], $current);
+    $chk = $db->prepare('SELECT statut FROM missions WHERE id=?');
+    $chk->execute([$id]);
+    $row = $chk->fetch();
+    if (!$row) respond(404, ['error' => 'Mission introuvable']);
+    if (($row['statut'] ?? '') === 'terminée') respond(400, ['error' => 'Impossible de modifier une mission terminée']);
+
+    $b = body();
+    $fields = []; $vals = [];
+    $strMap = [
+        'titre' => 'titre', 'description' => 'description', 'type' => 'type', 'priorite' => 'priorite',
+        'assignedToId' => '"assignedToId"', 'assignedToNom' => '"assignedToNom"',
+        'dateMission' => '"dateMission"',
+    ];
+    foreach ($strMap as $jsKey => $dbCol) {
+        if (array_key_exists($jsKey, $b)) { $fields[] = "$dbCol = ?"; $vals[] = $b[$jsKey]; }
+    }
+    // Coéquipier : normalisé en NULL plutôt que chaîne vide quand on le retire.
+    if (array_key_exists('assignedToId2', $b))  { $fields[] = '"assignedToId2" = ?';  $vals[] = $b['assignedToId2']  ?: null; }
+    if (array_key_exists('assignedToNom2', $b)) { $fields[] = '"assignedToNom2" = ?'; $vals[] = $b['assignedToNom2'] ?: null; }
+    if (!$fields) respond(400, ['error' => 'Aucun champ à mettre à jour']);
+    $vals[] = $id;
+    $db->prepare('UPDATE missions SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
 
     $stmt = $db->prepare('SELECT * FROM missions WHERE id=?');
     $stmt->execute([$id]);

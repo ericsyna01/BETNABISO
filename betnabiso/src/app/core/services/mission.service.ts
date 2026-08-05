@@ -39,15 +39,30 @@ export class MissionService {
   }
 
   getAll(): Mission[]                  { return this._data(); }
-  getByUser(userId: string): Mission[] { return this._data().filter(m => m.assignedToId === userId); }
+  getByUser(userId: string): Mission[] {
+    return this._data().filter(m => m.assignedToId === userId || m.assignedToId2 === userId);
+  }
   getActive(userId: string): Mission[] {
-    return this._data().filter(m => m.assignedToId === userId && !['terminée','refusée'].includes(m.statut));
+    return this._data().filter(m =>
+      (m.assignedToId === userId || m.assignedToId2 === userId) && !['terminée','refusée'].includes(m.statut)
+    );
   }
 
   async create(data: Omit<Mission, 'id' | 'statut' | 'createdAt'>): Promise<Mission | null> {
     try {
       const m = await firstValueFrom(this.http.post<Mission>(API, data));
       this.save([...this._data(), m]);
+      return m;
+    } catch { return null; }
+  }
+
+  async update(id: string, data: Partial<Pick<Mission,
+    'titre' | 'description' | 'type' | 'priorite' | 'assignedToId' | 'assignedToNom' |
+    'assignedToId2' | 'assignedToNom2' | 'dateMission'
+  >>): Promise<Mission | null> {
+    try {
+      const m = await firstValueFrom(this.http.put<Mission>(`${API}/${id}`, data));
+      this.save(this._data().map(x => x.id === id ? m : x));
       return m;
     } catch { return null; }
   }

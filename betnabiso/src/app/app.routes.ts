@@ -125,6 +125,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/outils/outils.component').then(m => m.OutilsComponent)
       },
       {
+        path: 'agenda',
+        loadComponent: () => import('./features/agenda/agenda.component').then(m => m.AgendaComponent)
+      },
+      {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent)
       },

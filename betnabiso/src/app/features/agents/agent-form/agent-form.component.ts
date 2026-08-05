@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -15,7 +16,7 @@ import { ZoneService } from '../../../core/services/zone.service';
   selector: 'app-agent-form',
   standalone: true,
   imports: [
-    ReactiveFormsModule, RouterLink, MatCardModule, MatFormFieldModule,
+    ReactiveFormsModule, RouterLink, DatePipe, MatCardModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, MatSnackBarModule
   ],
   template: `
@@ -35,7 +36,7 @@ import { ZoneService } from '../../../core/services/zone.service';
           @if (!isEdit() && lastAgent(); as last) {
             <div class="last-agent-hint">
               <mat-icon>history</mat-icon>
-              <span>Dernier agent créé : <strong>{{ last.nomAgent }}</strong> ({{ last.zone }})</span>
+              <span>Dernier agent créé : <strong>{{ last.nomAgent }}</strong> ({{ last.zone }}) — {{ last.createdAt | date:'dd/MM/yyyy à HH:mm' }}</span>
             </div>
           }
           <form [formGroup]="form" (ngSubmit)="onSubmit()">

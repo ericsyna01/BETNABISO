@@ -283,6 +283,7 @@ export class ChangePwdDialogComponent {
     </div>
   `,
   styles: [`
+    .table-container { overflow-x: auto; }
     .form-card { margin-bottom: 20px; mat-card-content { padding: 16px 24px 24px !important; } }
     .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
     .user-cell { display: flex; align-items: center; gap: 10px; }

@@ -571,6 +571,8 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
 
     @media (max-width: 900px) { .support-grid { grid-template-columns: 1fr; } .techniciens-panel { order: -1; } }
 
+    .table-container { overflow-x: auto; }
+
     /* ── Cartes affectations (mobile) ── */
     .support-cards { display: none; }
     @media (max-width: 640px) {

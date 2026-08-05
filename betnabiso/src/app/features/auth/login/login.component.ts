@@ -38,7 +38,8 @@ import { AuthService } from '../../../core/services/auth.service';
                 placeholder="Votre identifiant"
                 autocomplete="username"
                 (focus)="userFocus.set(true)"
-                (blur)="userFocus.set(false)">
+                (blur)="userFocus.set(false)"
+                (animationstart)="onAutofill($event, 'username')">
             </div>
             @if (form.get('username')?.hasError('required') && form.get('username')?.touched) {
               <span class="field-error">L'identifiant est requis</span>
@@ -55,7 +56,8 @@ import { AuthService } from '../../../core/services/auth.service';
                 placeholder="Votre mot de passe"
                 autocomplete="current-password"
                 (focus)="passFocus.set(true)"
-                (blur)="passFocus.set(false)">
+                (blur)="passFocus.set(false)"
+                (animationstart)="onAutofill($event, 'password')">
               <button type="button" class="eye-btn" (click)="showPassword.set(!showPassword())" tabindex="-1">
                 <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
@@ -104,6 +106,7 @@ import { AuthService } from '../../../core/services/auth.service';
       from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes onAutofillDetect { from {} to {} }
 
     .crest-mark {
       width: 56px; height: 56px; object-fit: contain; border-radius: 10px;
@@ -141,6 +144,11 @@ import { AuthService } from '../../../core/services/auth.service';
         flex: 1; background: none; border: none; outline: none;
         color: #f2e9d0; font-size: 14px; font-family: inherit;
         &::placeholder { color: #8a7f63; }
+        /* Détecte le remplissage automatique du navigateur (qui ne
+           déclenche pas les événements Angular) pour resynchroniser le
+           FormControl — sinon le bouton reste désactivé malgré des
+           champs visiblement remplis. */
+        &:-webkit-autofill { animation-name: onAutofillDetect; }
       }
     }
     .field.focused .field-row { border-color: #d4af37; }
@@ -218,6 +226,12 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   showPassword = signal(false);
   userFocus   = signal(false);
   passFocus   = signal(false);
+
+  onAutofill(event: Event, controlName: 'username' | 'password'): void {
+    if ((event as AnimationEvent).animationName !== 'onAutofillDetect') return;
+    const value = (event.target as HTMLInputElement).value;
+    if (value) this.form.get(controlName)?.setValue(value);
+  }
 
   ngAfterViewInit(): void {
     this.setupNetwork();

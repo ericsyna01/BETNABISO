@@ -69,8 +69,8 @@ export class NotesDialogComponent {
             MatDatepickerModule],
   template: `
     <h2 mat-dialog-title>
-      <mat-icon style="vertical-align:middle;margin-right:8px;color:#1a3a5c">assignment_add</mat-icon>
-      Confier une mission
+      <mat-icon style="vertical-align:middle;margin-right:8px;color:#1a3a5c">{{ data.mission ? 'edit' : 'assignment_add' }}</mat-icon>
+      {{ data.mission ? 'Modifier la mission' : 'Confier une mission' }}
     </h2>
     <mat-dialog-content style="padding-top:12px;min-width:340px">
       <form [formGroup]="form" id="missionForm" (ngSubmit)="submit()">
@@ -134,11 +134,27 @@ export class NotesDialogComponent {
           </div>
         }
 
+        <mat-form-field appearance="outline" style="width:100%;margin-top:4px">
+          <mat-label>Coéquipier (optionnel)</mat-label>
+          <mat-icon matPrefix>group_add</mat-icon>
+          <mat-select formControlName="assignedToId2">
+            <mat-option value="">Aucun</mat-option>
+            @for (t of coequipierOptions(); track t.id) {
+              <mat-option [value]="t.id">
+                <span class="pres-dot-sm" [style.background]="data.presenceSvc.isOnline(t.id) ? '#4caf50' : '#ccc'"
+                      style="width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;margin-right:6px"></span>
+                {{ t.prenom }} {{ t.nom }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-hint>Pour une mission qui nécessite deux personnes</mat-hint>
+        </mat-form-field>
+
         <mat-form-field appearance="outline" style="width:100%;margin-top:8px">
           <mat-label>Date de la mission *</mat-label>
           <mat-icon matPrefix>event</mat-icon>
           <input matInput [matDatepicker]="picker" formControlName="dateMission"
-                 [min]="today" placeholder="jj/mm/aaaa" readonly>
+                 [min]="data.mission ? null : today" placeholder="jj/mm/aaaa" readonly>
           <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
           <mat-datepicker #picker></mat-datepicker>
           @if (form.get('dateMission')?.hasError('minDate')) {
@@ -150,7 +166,7 @@ export class NotesDialogComponent {
     <mat-dialog-actions align="end">
       <button mat-stroked-button mat-dialog-close>Annuler</button>
       <button mat-raised-button color="primary" form="missionForm" type="submit" [disabled]="form.invalid">
-        <mat-icon>send</mat-icon> Confier
+        <mat-icon>{{ data.mission ? 'save' : 'send' }}</mat-icon> {{ data.mission ? 'Enregistrer' : 'Confier' }}
       </button>
     </mat-dialog-actions>
   `,
@@ -172,23 +188,34 @@ export class MissionDialogComponent {
     activeMissions: (id: string) => number;
     activeInterventions: (id: string) => number;
     preselect?: User;
+    mission?: Mission;
   }>(MAT_DIALOG_DATA);
   private ref = inject(MatDialogRef<MissionDialogComponent>);
   private fb  = inject(FormBuilder);
   private typeSvc = inject(TypeLabelService);
 
   types = computed(() => this.typeSvc.getByCategorie('mission'));
-  selectedTech = signal<User | null>(this.data.preselect ?? null);
+  selectedTech = signal<User | null>(
+    this.data.preselect ?? (this.data.mission ? this.data.techniciens.find(t => t.id === this.data.mission!.assignedToId) ?? null : null)
+  );
   readonly today = new Date(new Date().setHours(0, 0, 0, 0));
 
   form = this.fb.group({
-    titre:        ['', Validators.required],
-    description:  [''],
-    type:         [this.types()[0]?.label ?? '', Validators.required],
-    priorite:     ['Normale', Validators.required],
-    assignedToId: [this.data.preselect?.id ?? '', Validators.required],
-    dateMission:  [new Date(), [Validators.required, this.minDateValidator()]],
+    titre:         [this.data.mission?.titre ?? '', Validators.required],
+    description:   [this.data.mission?.description ?? ''],
+    type:          [this.data.mission?.type ?? this.types()[0]?.label ?? '', Validators.required],
+    priorite:      [this.data.mission?.priorite ?? 'Normale', Validators.required],
+    assignedToId:  [this.data.mission?.assignedToId ?? this.data.preselect?.id ?? '', Validators.required],
+    assignedToId2: [this.data.mission?.assignedToId2 ?? ''],
+    dateMission:   [
+      this.data.mission ? new Date(this.data.mission.dateMission) : new Date(),
+      this.data.mission ? [Validators.required] : [Validators.required, this.minDateValidator()],
+    ],
   });
+
+  coequipierOptions(): User[] {
+    return this.data.techniciens.filter(t => t.id !== this.form.get('assignedToId')?.value);
+  }
 
   private minDateValidator() {
     return (control: import('@angular/forms').AbstractControl) => {
@@ -213,14 +240,104 @@ export class MissionDialogComponent {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const v = this.form.value;
     const tech = this.data.techniciens.find(t => t.id === v.assignedToId)!;
+    const tech2 = v.assignedToId2 ? this.data.techniciens.find(t => t.id === v.assignedToId2) : undefined;
     const d = v.dateMission instanceof Date ? v.dateMission : new Date(v.dateMission as any);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     this.ref.close({
       ...v,
       dateMission: dateStr,
       assignedToNom: `${tech.prenom} ${tech.nom}`,
+      assignedToId2: tech2?.id || null,
+      assignedToNom2: tech2 ? `${tech2.prenom} ${tech2.nom}` : null,
+      editId: this.data.mission?.id,
     });
   }
+}
+
+/* ── Dialog Détails mission (lecture seule) ───────────────────────────────── */
+@Component({
+  selector: 'app-mission-detail-dialog',
+  standalone: true,
+  imports: [DatePipe, MatDialogModule, MatButtonModule, MatIconModule],
+  template: `
+    <h2 mat-dialog-title style="display:flex;align-items:center;gap:8px">
+      <mat-icon style="color:#1a3a5c">assignment</mat-icon>
+      {{ data.mission.titre }}
+    </h2>
+    <mat-dialog-content style="padding-top:4px;min-width:360px;max-width:480px">
+      <div class="dd-badges">
+        <span class="dd-badge">{{ data.mission.type }}</span>
+        <span class="dd-badge" [class]="'prio-' + data.mission.priorite.toLowerCase()">{{ data.mission.priorite }}</span>
+        <span class="statut-chip {{ data.mission.statut }}">{{ data.statutLabel }}</span>
+      </div>
+
+      @if (data.mission.description) {
+        <div class="dd-section">
+          <div class="dd-label"><mat-icon>notes</mat-icon> Description</div>
+          <p class="dd-desc">{{ data.mission.description }}</p>
+        </div>
+      }
+
+      <div class="dd-section">
+        <div class="dd-label"><mat-icon>engineering</mat-icon> Assigné à</div>
+        <p>{{ data.mission.assignedToNom }}{{ data.mission.assignedToNom2 ? ' + ' + data.mission.assignedToNom2 : '' }}</p>
+      </div>
+
+      <div class="dd-section">
+        <div class="dd-label"><mat-icon>person</mat-icon> Confié par</div>
+        <p>{{ data.mission.assignedByNom }}</p>
+      </div>
+
+      <div class="dd-grid">
+        <div class="dd-section">
+          <div class="dd-label"><mat-icon>event</mat-icon> Date mission</div>
+          <p>{{ data.mission.dateMission | date:'dd/MM/yyyy' }}</p>
+        </div>
+        <div class="dd-section">
+          <div class="dd-label"><mat-icon>schedule</mat-icon> Créée le</div>
+          <p>{{ data.mission.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+        </div>
+        @if (data.mission.completedAt) {
+          <div class="dd-section">
+            <div class="dd-label"><mat-icon>check_circle</mat-icon> Clôturée le</div>
+            <p>{{ data.mission.completedAt | date:'dd/MM/yyyy HH:mm' }}</p>
+          </div>
+        }
+      </div>
+
+      @if (data.mission.notes) {
+        <div class="dd-section">
+          <div class="dd-label"><mat-icon>chat_bubble_outline</mat-icon> Notes</div>
+          <p class="dd-desc">{{ data.mission.notes }}</p>
+        </div>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-raised-button color="primary" mat-dialog-close>Fermer</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .dd-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .dd-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px;
+      font-weight: 600; background: #eceff1; color: #37474f;
+      &.prio-haute   { background: #fce4ec; color: #c62828; }
+      &.prio-normale { background: #fff8e1; color: #f9a825; }
+      &.prio-basse   { background: #e8f5e9; color: #2e7d32; }
+    }
+    .dd-section { margin-bottom: 14px; }
+    .dd-label {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+      color: #78909c; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    }
+    .dd-desc { white-space: pre-wrap; font-size: 14px; color: #263238; margin: 0; }
+    .dd-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+    p { margin: 0; font-size: 14px; color: #263238; }
+  `]
+})
+export class MissionDetailDialogComponent {
+  data = inject<{ mission: Mission; statutLabel: string }>(MAT_DIALOG_DATA);
 }
 
 /* ── Composant principal Missions ─────────────────────────────────────────── */
@@ -426,7 +543,12 @@ export class MissionDialogComponent {
             <td mat-cell *matCellDef="let m">
               <div class="user-cell">
                 <div class="av-sm">{{ m.assignedToNom[0] }}</div>
-                <div class="cell-name">{{ m.assignedToNom }}</div>
+                <div class="cell-name">
+                  {{ m.assignedToNom }}
+                  @if (m.assignedToNom2) {
+                    <span class="cell-sub">+ {{ m.assignedToNom2 }}</span>
+                  }
+                </div>
               </div>
             </td>
           </ng-container>
@@ -487,6 +609,9 @@ export class MissionDialogComponent {
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let m">
+              <button mat-icon-button (click)="openDetail(m)" matTooltip="Voir les détails">
+                <mat-icon>visibility</mat-icon>
+              </button>
               @if (auth.isTechnicien() || auth.isChauffeur()) {
                 <div class="tech-actions">
                   @if (m.statut === 'assignée') {
@@ -514,6 +639,11 @@ export class MissionDialogComponent {
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #mMenu="matMenu">
+                  @if (m.statut !== 'terminée') {
+                    <button mat-menu-item (click)="editMission(m)">
+                      <mat-icon>edit</mat-icon> Modifier
+                    </button>
+                  }
                   @if (m.statut === 'assignée') {
                     <button mat-menu-item (click)="updateStatut(m, 'en_cours')" style="color:#1565c0">
                       <mat-icon>play_circle</mat-icon> Forcer démarrage
@@ -576,7 +706,12 @@ export class MissionDialogComponent {
               <div class="mc-line">
                 <div class="user-cell">
                   <div class="av-sm">{{ m.assignedToNom[0] }}</div>
-                  <div class="cell-name">{{ m.assignedToNom }}</div>
+                  <div class="cell-name">
+                    {{ m.assignedToNom }}
+                    @if (m.assignedToNom2) {
+                      <span class="cell-sub">+ {{ m.assignedToNom2 }}</span>
+                    }
+                  </div>
                 </div>
                 @if (auth.isAdmin()) {
                   <div class="user-cell">
@@ -601,6 +736,9 @@ export class MissionDialogComponent {
               </div>
 
               <div class="mc-actions">
+                <button mat-icon-button (click)="openDetail(m)" matTooltip="Voir les détails">
+                  <mat-icon>visibility</mat-icon>
+                </button>
                 @if (auth.isTechnicien() || auth.isChauffeur()) {
                   <div class="tech-actions">
                     @if (m.statut === 'assignée') {
@@ -628,6 +766,11 @@ export class MissionDialogComponent {
                     <mat-icon>more_vert</mat-icon>
                   </button>
                   <mat-menu #mMenuCard="matMenu">
+                    @if (m.statut !== 'terminée') {
+                      <button mat-menu-item (click)="editMission(m)">
+                        <mat-icon>edit</mat-icon> Modifier
+                      </button>
+                    }
                     @if (m.statut === 'assignée') {
                       <button mat-menu-item (click)="updateStatut(m, 'en_cours')" style="color:#1565c0">
                         <mat-icon>play_circle</mat-icon> Forcer démarrage
@@ -731,7 +874,7 @@ export class MissionDialogComponent {
     .clear-btn     { height: 36px; font-size: 12px; }
 
     /* Table */
-    .table-container { background: white; border-radius: 10px 10px 0 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+    .table-container { background: white; border-radius: 10px 10px 0 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; overflow-y: hidden; }
     .table-footer    { background: white; border-top: 1px solid #f0f4f8; border-radius: 0 0 10px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 
     /* Sortable headers */
@@ -908,7 +1051,9 @@ export class MissionsComponent implements OnInit {
   countStatut(s: MissionStatut): number { return this.allMissions().filter(m => m.statut === s).length; }
 
   activeMissions(techId: string): number {
-    return this.allMissions().filter(m => m.assignedToId === techId && !['terminée','refusée'].includes(m.statut)).length;
+    return this.allMissions().filter(m =>
+      (m.assignedToId === techId || m.assignedToId2 === techId) && !['terminée','refusée'].includes(m.statut)
+    ).length;
   }
 
   activeIntervCount(techId: string): number {
@@ -946,7 +1091,7 @@ export class MissionsComponent implements OnInit {
   }
 
   /* ── Dialogs ──────────────────────────────────────────────────────────── */
-  openDialog(preselect?: User): void {
+  openDialog(preselect?: User, mission?: Mission): void {
     const ref = this.dialog.open(MissionDialogComponent, {
       width: '500px',
       data: {
@@ -955,17 +1100,36 @@ export class MissionsComponent implements OnInit {
         activeMissions: (id: string) => this.activeMissions(id),
         activeInterventions: (id: string) => this.activeIntervCount(id),
         preselect,
+        mission,
       }
     });
     ref.afterClosed().subscribe(async (val) => {
       if (!val) return;
-      const result = await this.missionSvc.create(val);
-      if (result) this.snack.open(`Mission confiée à ${result.assignedToNom} ✓`, 'OK', { duration: 3000, panelClass: 'success-snack' });
-      else        this.snack.open('Erreur lors de la création', 'OK', { duration: 3000, panelClass: 'error-snack' });
+      const { editId, ...data } = val;
+      const result = editId ? await this.missionSvc.update(editId, data) : await this.missionSvc.create(data);
+      if (result) {
+        const noms = result.assignedToNom2 ? `${result.assignedToNom} et ${result.assignedToNom2}` : result.assignedToNom;
+        this.snack.open(
+          editId ? `Mission "${result.titre}" modifiée ✓` : `Mission confiée à ${noms} ✓`,
+          'OK', { duration: 3000, panelClass: 'success-snack' }
+        );
+      } else {
+        this.snack.open(editId ? 'Erreur lors de la modification' : 'Erreur lors de la création',
+          'OK', { duration: 3000, panelClass: 'error-snack' });
+      }
     });
   }
 
   openDialogFor(t: User): void { this.openDialog(t); }
+
+  editMission(m: Mission): void { this.openDialog(undefined, m); }
+
+  openDetail(m: Mission): void {
+    this.dialog.open(MissionDetailDialogComponent, {
+      width: '480px',
+      data: { mission: m, statutLabel: this.statutLabel(m.statut) }
+    });
+  }
 
   /* ── Actions ──────────────────────────────────────────────────────────── */
   async updateStatut(m: Mission, statut: MissionStatut): Promise<void> {

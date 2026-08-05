@@ -88,8 +88,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
       mat-icon { color: var(--primary-light); font-size: 18px; }
     }
 
-    .add-row { display: flex; align-items: flex-start; gap: 12px; }
-    .zone-input { flex: 1; }
+    .add-row { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+    .zone-input { flex: 1; min-width: 160px; }
 
     .count-badge { background: var(--primary); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700; margin-left: 4px; }
 
