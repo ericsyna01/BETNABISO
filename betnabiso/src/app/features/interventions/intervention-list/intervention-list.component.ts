@@ -25,6 +25,7 @@ import { EvaluationService } from '../../../core/services/evaluation.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { User } from '../../../core/models/user.model';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { TextInputDialogComponent, TextInputDialogData } from '../../../core/components/text-input-dialog/text-input-dialog.component';
 import { StarRatingDialogComponent, StarRatingDialogData, StarRatingResult } from '../../../core/components/star-rating-dialog/star-rating-dialog.component';
 import { KanbanComponent } from '../kanban/kanban.component';
@@ -130,6 +131,7 @@ export class DeplacementDialogComponent {
     MatTableModule, MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
     MatMenuModule, MatBadgeModule, MatDialogModule, MatCheckboxModule, MatPaginatorModule,
+    MatDatepickerModule,
     KanbanComponent
   ],
   template: `
@@ -216,14 +218,18 @@ export class DeplacementDialogComponent {
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:140px">
+        <mat-form-field appearance="outline" style="width:150px">
           <mat-label>Du</mat-label>
-          <input matInput type="date" [ngModel]="filterDateFrom()" (ngModelChange)="filterDateFrom.set($event)">
+          <input matInput [matDatepicker]="pickerFrom" [ngModel]="filterDateFrom()" (ngModelChange)="filterDateFrom.set($event)" readonly>
+          <mat-datepicker-toggle matSuffix [for]="pickerFrom"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFrom></mat-datepicker>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:140px">
+        <mat-form-field appearance="outline" style="width:150px">
           <mat-label>Au</mat-label>
-          <input matInput type="date" [ngModel]="filterDateTo()" (ngModelChange)="filterDateTo.set($event)">
+          <input matInput [matDatepicker]="pickerTo" [ngModel]="filterDateTo()" (ngModelChange)="filterDateTo.set($event)" readonly>
+          <mat-datepicker-toggle matSuffix [for]="pickerTo"></mat-datepicker-toggle>
+          <mat-datepicker #pickerTo></mat-datepicker>
         </mat-form-field>
 
         @if (!auth.isTechnicien()) {
@@ -847,8 +853,8 @@ export class InterventionListComponent implements OnDestroy {
   filterType        = signal('');
   filterStatut      = signal('');
   filterDeplacement = signal(false);
-  filterDateFrom    = signal('');
-  filterDateTo      = signal('');
+  filterDateFrom    = signal<Date | null>(null);
+  filterDateTo      = signal<Date | null>(null);
   sortCol           = signal<string>('');
   sortDir           = signal<'asc' | 'desc'>('desc');
 
@@ -878,13 +884,17 @@ export class InterventionListComponent implements OnDestroy {
     !!this.filterDateFrom() || !!this.filterDateTo() || !!this.highlightId()
   );
 
+  private toISODate(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   resetFilters(): void {
     this.searchQuery.set('');
     this.filterType.set('');
     this.filterStatut.set('');
     this.filterDeplacement.set(false);
-    this.filterDateFrom.set('');
-    this.filterDateTo.set('');
+    this.filterDateFrom.set(null);
+    this.filterDateTo.set(null);
     this.sortCol.set('');
     this.highlightId.set(null);
   }
@@ -917,8 +927,8 @@ export class InterventionListComponent implements OnDestroy {
     const fs = this.filterStatut();
     if (fs) items = items.filter(i => i.statut === fs);
     const from = this.filterDateFrom();
-    if (from) items = items.filter(i => i.dateDebut >= from);
-    const to = this.filterDateTo();
+    if (from) { const s = this.toISODate(from); items = items.filter(i => i.dateDebut >= s); }
+    const to = this.filterDateTo() ? this.toISODate(this.filterDateTo()!) : '';
     if (to) items = items.filter(i => i.dateDebut <= to + 'T23:59:59');
 
     const col = this.sortCol();
@@ -930,7 +940,7 @@ export class InterventionListComponent implements OnDestroy {
         return va < vb ? -dir : va > vb ? dir : 0;
       });
     }
-    return items.sort((a, b) => {
+    return [...items].sort((a, b) => {
       if (a.deplacementRequis && !b.deplacementRequis) return -1;
       if (!a.deplacementRequis && b.deplacementRequis) return 1;
       if (a.statut === 'Assignée' && b.statut !== 'Assignée') return -1;

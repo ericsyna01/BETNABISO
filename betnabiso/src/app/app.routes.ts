@@ -81,6 +81,11 @@ export const routes: Routes = [
         canActivate: [roleGuard], data: { roles: ['superadmin', 'admin', 'support', 'technicien', 'chauffeur'] }
       },
       {
+        path: 'planning/historique',
+        loadComponent: () => import('./features/planning/planning-history.component').then(m => m.PlanningHistoryComponent),
+        canActivate: [roleGuard], data: { roles: ['superadmin', 'admin', 'support', 'technicien', 'chauffeur'] }
+      },
+      {
         path: 'admin',
         loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent),
         canActivate: [roleGuard], data: { roles: ['superadmin', 'admin'] },

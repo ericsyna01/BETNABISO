@@ -26,6 +26,7 @@ import { Mission, MissionStatut } from '../../core/models/mission.model';
 import { TypeLabelService } from '../../core/services/type-label.service';
 import { User } from '../../core/models/user.model';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 /* ── Dialog Notes (refus + terminer) ─────────────────────────────────────── */
 @Component({
@@ -137,7 +138,7 @@ export class NotesDialogComponent {
         <mat-form-field appearance="outline" style="width:100%;margin-top:4px">
           <mat-label>Coéquipier (optionnel)</mat-label>
           <mat-icon matPrefix>group_add</mat-icon>
-          <mat-select formControlName="assignedToId2">
+          <mat-select formControlName="assignedToId2" (selectionChange)="onCoequipierChange($event.value)">
             <mat-option value="">Aucun</mat-option>
             @for (t of coequipierOptions(); track t.id) {
               <mat-option [value]="t.id">
@@ -147,7 +148,7 @@ export class NotesDialogComponent {
               </mat-option>
             }
           </mat-select>
-          <mat-hint>Pour une mission qui nécessite deux personnes</mat-hint>
+          <mat-hint>Un coéquipier chauffeur bascule le type en Déplacement</mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%;margin-top:8px">
@@ -228,6 +229,15 @@ export class MissionDialogComponent {
 
   onTechChange(id: string): void {
     this.selectedTech.set(this.data.techniciens.find(t => t.id === id) ?? null);
+  }
+
+  onCoequipierChange(id: string): void {
+    const coequipier = this.data.techniciens.find(t => t.id === id);
+    if (!coequipier) return;
+    const isChauffeur = (coequipier.roles ?? [coequipier.role]).includes('chauffeur');
+    if (!isChauffeur) return;
+    const deplacement = this.types().find(t => t.label.toLowerCase() === 'déplacement');
+    if (deplacement) this.form.get('type')?.setValue(deplacement.label);
   }
 
   isBusy(): boolean {
@@ -962,6 +972,7 @@ export class MissionsComponent implements OnInit {
   private dialog          = inject(MatDialog);
   private snack           = inject(MatSnackBar);
   private confirmSvc      = inject(ConfirmService);
+  private notifSvc        = inject(NotificationService);
   auth        = inject(AuthService);
   presenceSvc = inject(PresenceService);
 
@@ -1113,6 +1124,17 @@ export class MissionsComponent implements OnInit {
           editId ? `Mission "${result.titre}" modifiée ✓` : `Mission confiée à ${noms} ✓`,
           'OK', { duration: 3000, panelClass: 'success-snack' }
         );
+        if (result.type?.toLowerCase() === 'déplacement') {
+          const user = this.auth.currentUser();
+          this.notifSvc.send({
+            type: 'mission_assignee',
+            agentNom: result.assignedToNom2 || result.assignedToNom,
+            requestedById: user?.id,
+            requestedByNom: user ? `${user.prenom} ${user.nom}` : undefined,
+            requestedByRole: user?.role,
+            message: `Déplacement à effectuer — ${result.titre} (${noms})`,
+          });
+        }
       } else {
         this.snack.open(editId ? 'Erreur lors de la modification' : 'Erreur lors de la création',
           'OK', { duration: 3000, panelClass: 'error-snack' });

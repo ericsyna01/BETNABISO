@@ -99,6 +99,7 @@ button[mat-icon-button].delete-btn {
   &.admin { background: #e3f2fd; color: #0d47a1; }
   &.support { background: #fff8e1; color: #e65100; }
   &.technicien { background: #e0f2f1; color: #00695c; }
+  &.chauffeur { background: #e8eaf6; color: #283593; }
 }
 
 .page-container { padding: 24px; }
@@ -476,6 +477,7 @@ html.dark-mode {
     &.admin      { background: #1a3560 !important; color: #93c5fd !important; }
     &.support    { background: #3d2000 !important; color: #fcd34d !important; }
     &.technicien { background: #0a3d2e !important; color: #6ee7b7 !important; }
+    &.chauffeur  { background: #1a237e !important; color: #c5cae9 !important; }
   }
 
   /* ─ Misc text overrides ─────────────── */

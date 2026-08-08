@@ -665,7 +665,11 @@ export class SupportComponent {
     if (fs) items = items.filter(i => i.statut === fs);
     const col = this.sortCol();
     const dir = this.sortDir() === 'asc' ? 1 : -1;
-    return items.sort((a, b) => {
+    // Copie avant tri : sort() mute le tableau en place et renvoie la même
+    // référence, donc quand aucun filtre n'a créé de copie au-dessus (cas le
+    // plus courant), Angular voit un computed() qui "n'a pas changé" et ne
+    // propage jamais le nouvel ordre au tableau affiché.
+    return [...items].sort((a, b) => {
       let cmp = 0;
       if (col === 'priorite') {
         const pMap: Record<string, number> = { 'Haute': 0, 'Normale': 1, 'Basse': 2 };

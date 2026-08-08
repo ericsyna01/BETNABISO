@@ -1148,7 +1148,16 @@ export class HistoryComponent implements OnInit {
   totalTerminees     = computed(() => this.periodFiltered().filter(i => i.statut === 'Terminée').length);
   totalEchecs        = computed(() => this.periodFiltered().filter(i => i.statut === 'Échec').length);
   totalReassignments = computed(() => this.interventionSvc.getReassignments().length);
-  totalTransports    = computed(() => this.periodFiltered().filter(i => !!i.chauffeurId).length);
+  totalTransports    = computed(() => {
+    const chauffeurIds = new Set(
+      this.userSvc.getAll().filter(u => (u.roles ?? [u.role]).includes('chauffeur')).map(u => u.id)
+    );
+    const missionTransports = this.periodFilteredMissions().filter(m =>
+      m.type?.toLowerCase() === 'déplacement' &&
+      (chauffeurIds.has(m.assignedToId) || (m.assignedToId2 && chauffeurIds.has(m.assignedToId2)))
+    ).length;
+    return this.periodFiltered().filter(i => !!i.chauffeurId).length + missionTransports;
+  });
   tauxSucces = computed(() => {
     const t = this.totalInterventions();
     return t ? Math.round(this.totalTerminees() / t * 100) : 0;
@@ -1206,12 +1215,29 @@ export class HistoryComponent implements OnInit {
 
   chauffeurStats = computed(() => {
     const interventions = this.interventionSvc.getAllRaw();
-    const users = this.userSvc.getAll().filter(u => (u.roles ?? [u.role]).includes('chauffeur'));
+    const missions = this.missionSvc.getAll().filter(m => m.type?.toLowerCase() === 'déplacement');
+    const allUsers = this.userSvc.getAll();
+    const users = allUsers.filter(u => (u.roles ?? [u.role]).includes('chauffeur'));
     return users.map(u => {
       const transports = interventions.filter(i => i.chauffeurId === u.id);
-      const zones = [...new Set(transports.map(t => t.agentZone).filter(Boolean))].join(', ') || '—';
-      const techs = [...new Set(transports.map(t => t.technicienNom).filter(Boolean))].join(', ') || '—';
-      return { nom: `${u.prenom} ${u.nom}`, transports: transports.length, zones, techs };
+      const deplacements = missions.filter(m => m.assignedToId === u.id || m.assignedToId2 === u.id);
+
+      const zones = new Set(transports.map(t => t.agentZone).filter(Boolean));
+      const techs = new Set(transports.map(t => t.technicienNom).filter(Boolean));
+      for (const m of deplacements) {
+        const coequipierNom = m.assignedToId === u.id ? m.assignedToNom2 : m.assignedToNom;
+        const coequipierId  = m.assignedToId === u.id ? m.assignedToId2  : m.assignedToId;
+        if (coequipierNom) techs.add(coequipierNom);
+        const zone = allUsers.find(x => x.id === coequipierId)?.zone;
+        if (zone) zones.add(zone);
+      }
+
+      return {
+        nom: `${u.prenom} ${u.nom}`,
+        transports: transports.length + deplacements.length,
+        zones: zones.size ? [...zones].join(', ') : '—',
+        techs: techs.size ? [...techs].join(', ') : '—',
+      };
     }).sort((a, b) => b.transports - a.transports);
   });
 

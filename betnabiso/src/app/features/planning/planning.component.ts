@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,7 +35,7 @@ interface DayCell {
   selector: 'app-planning',
   standalone: true,
   imports: [
-    FormsModule, DragDropModule,
+    FormsModule, DragDropModule, RouterLink,
     MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatTooltipModule, MatSnackBarModule,
     MatChipsModule, MatDividerModule, MatMenuModule
@@ -48,6 +49,9 @@ interface DayCell {
     <div class="page-header">
       <h1><mat-icon style="vertical-align:middle;margin-right:8px">calendar_month</mat-icon>Planning & Rotation</h1>
       <div class="page-header-actions">
+        <a mat-stroked-button routerLink="/planning/historique">
+          <mat-icon>history</mat-icon> Historique
+        </a>
         <button mat-stroked-button (click)="clearWeek()">
           <mat-icon>delete_sweep</mat-icon> Vider la semaine
         </button>
@@ -228,6 +232,11 @@ interface DayCell {
       <div>
         <h1><mat-icon style="vertical-align:middle;margin-right:8px">event_note</mat-icon>Mon emploi du temps</h1>
         <p class="page-subtitle">Bonjour {{ currentUser()?.prenom }} — voici vos affectations planifiées</p>
+      </div>
+      <div class="page-header-actions">
+        <a mat-stroked-button routerLink="/planning/historique">
+          <mat-icon>history</mat-icon> Historique
+        </a>
       </div>
     </div>
 
