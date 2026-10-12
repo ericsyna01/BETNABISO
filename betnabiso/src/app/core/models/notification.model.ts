@@ -15,4 +15,5 @@ export interface AgentNotif {
   statut: NotifStatut;
   createdAt: string;
   photoUrl?: string | null;
+  audioUrl?: string | null;
 }

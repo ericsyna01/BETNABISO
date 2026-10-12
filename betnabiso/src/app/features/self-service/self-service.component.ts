@@ -67,10 +67,42 @@ import { TypeLabelService } from '../../core/services/type-label.service';
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Décrivez le problème</mat-label>
+              <mat-label>{{ audioUrl() ? 'Décrivez le problème (optionnel)' : 'Décrivez le problème' }}</mat-label>
               <textarea matInput rows="4" maxlength="500" formControlName="description"
                         placeholder="Ex : la caisse ne s'allume plus depuis ce matin"></textarea>
             </mat-form-field>
+
+            @if (micSupported()) {
+              <div class="ss-voice">
+                @if (!audioUrl() && !recording()) {
+                  <button type="button" mat-stroked-button class="ss-voice-btn" (click)="startRecording()">
+                    <mat-icon>mic</mat-icon>
+                    <span>Ou décrire à voix haute (optionnel)</span>
+                  </button>
+                }
+                @if (recording()) {
+                  <div class="ss-voice-recording">
+                    <span class="ss-rec-dot"></span>
+                    <span>Enregistrement… {{ recordTime() }}</span>
+                    <button type="button" mat-icon-button (click)="stopRecording()" aria-label="Arrêter l'enregistrement">
+                      <mat-icon>stop_circle</mat-icon>
+                    </button>
+                  </div>
+                }
+                @if (audioUrl() && !recording()) {
+                  <div class="ss-voice-preview">
+                    <mat-icon class="ss-voice-icon">graphic_eq</mat-icon>
+                    <audio [src]="audioUrl()!" controls></audio>
+                    <button type="button" mat-icon-button class="ss-voice-remove" (click)="clearAudio()" aria-label="Supprimer le message vocal">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                }
+                @if (micError()) {
+                  <p class="ss-mic-error">{{ micError() }}</p>
+                }
+              </div>
+            }
 
             <mat-form-field appearance="outline">
               <mat-label>Votre nom (optionnel)</mat-label>
@@ -100,7 +132,7 @@ import { TypeLabelService } from '../../core/services/type-label.service';
             }
 
             <button mat-raised-button color="primary" type="submit" class="ss-submit"
-                    [disabled]="form.invalid || sending()">
+                    [disabled]="form.invalid || sending() || !hasContent()">
               @if (sending()) {
                 <ng-container>
                   <mat-spinner diameter="18" class="ss-btn-spinner"></mat-spinner>
@@ -181,6 +213,31 @@ import { TypeLabelService } from '../../core/services/type-label.service';
     }
     .ss-btn-spinner { --mdc-circular-progress-active-indicator-color: white; }
 
+    .ss-voice { margin-top: -2px; margin-bottom: 4px; }
+    .ss-voice-btn {
+      height: 44px; width: 100%; color: #1a3a5c; border-color: #dde3ec;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .ss-voice-recording {
+      display: flex; align-items: center; gap: 10px;
+      height: 44px; padding: 0 14px; border-radius: 8px;
+      background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13.5px;
+    }
+    .ss-rec-dot {
+      width: 9px; height: 9px; border-radius: 50%; background: #dc2626;
+      animation: ss-pulse 1.2s infinite;
+    }
+    @keyframes ss-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    .ss-voice-recording button { margin-left: auto; color: #b91c1c; }
+    .ss-voice-preview {
+      display: flex; align-items: center; gap: 8px;
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 6px 8px;
+      audio { flex: 1; min-width: 0; height: 34px; }
+    }
+    .ss-voice-icon { color: #16a34a; flex-shrink: 0; }
+    .ss-voice-remove { color: #64748b !important; flex-shrink: 0; }
+    .ss-mic-error { margin: 6px 0 0; font-size: 12px; color: #b91c1c; }
+
     .ss-footer { text-align: center; font-size: 11px; color: #b0bac9; margin: 20px 0 0; }
   `]
 })
@@ -199,11 +256,28 @@ export class SelfServiceComponent implements OnInit {
   photoPreview = signal<string | null>(null);
   private pendingPhoto: File | null = null;
 
+  // Message vocal : alternative à la description écrite pour un agent qui ne
+  // se sent pas à l'aise pour décrire une panne par texte.
+  recording     = signal(false);
+  recordSeconds = signal(0);
+  audioUrl      = signal<string | null>(null);
+  micError      = signal<string | null>(null);
+  private audioBlob: Blob | null = null;
+  private audioExt = 'webm';
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private recordTimerId: ReturnType<typeof setInterval> | null = null;
+
+  recordTime = computed(() => {
+    const s = this.recordSeconds();
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  });
+
   panneTypes = computed(() => this.typeSvc.getByCategorie('panne'));
 
   form = this.fb.group({
     type: ['', Validators.required],
-    description: ['', [Validators.required, Validators.maxLength(500)]],
+    description: ['', [Validators.maxLength(500)]],
     contactNom: [''],
     contactNumero: [''],
   });
@@ -247,8 +321,60 @@ export class SelfServiceComponent implements OnInit {
     input.value = '';
   }
 
+  micSupported(): boolean {
+    return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  }
+
+  hasContent(): boolean {
+    return !!(this.form.value.description ?? '').trim() || !!this.audioBlob;
+  }
+
+  async startRecording(): Promise<void> {
+    this.micError.set(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      const mimeType = candidates.find(m => MediaRecorder.isTypeSupported?.(m)) ?? '';
+      this.audioExt = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+      this.mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      this.audioChunks = [];
+      this.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) this.audioChunks.push(e.data); };
+      this.mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        this.audioBlob = new Blob(this.audioChunks, { type: mimeType || 'audio/webm' });
+        if (this.audioUrl()) URL.revokeObjectURL(this.audioUrl()!);
+        this.audioUrl.set(URL.createObjectURL(this.audioBlob));
+      };
+      this.mediaRecorder.start();
+      this.recording.set(true);
+      this.recordSeconds.set(0);
+      this.recordTimerId = setInterval(() => {
+        this.recordSeconds.update(s => s + 1);
+        if (this.recordSeconds() >= 120) this.stopRecording(); // limite 2 min
+      }, 1000);
+    } catch {
+      this.micError.set("Impossible d'accéder au micro. Vérifiez les autorisations du navigateur.");
+    }
+  }
+
+  stopRecording(): void {
+    this.mediaRecorder?.stop();
+    this.recording.set(false);
+    if (this.recordTimerId) { clearInterval(this.recordTimerId); this.recordTimerId = null; }
+  }
+
+  clearAudio(): void {
+    this.audioBlob = null;
+    if (this.audioUrl()) URL.revokeObjectURL(this.audioUrl()!);
+    this.audioUrl.set(null);
+  }
+
   onSubmit(): void {
     if (this.form.invalid) return;
+    if (!this.hasContent()) {
+      this.error.set('Décrivez le problème par écrit ou par message vocal');
+      return;
+    }
     this.sending.set(true);
     this.error.set('');
 
@@ -259,6 +385,7 @@ export class SelfServiceComponent implements OnInit {
     fd.append('contactNom', v.contactNom ?? '');
     fd.append('contactNumero', v.contactNumero ?? '');
     if (this.pendingPhoto) fd.append('photo', this.pendingPhoto);
+    if (this.audioBlob) fd.append('audio', this.audioBlob, `message.${this.audioExt}`);
 
     this.http.post(`${environment.apiUrl}/self-service/${this.token}`, fd).subscribe({
       next: () => { this.state.set('sent'); this.sending.set(false); },

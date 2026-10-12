@@ -78,11 +78,15 @@ export class InterventionService {
     return this._data().filter(i => i.agentId === agentId);
   }
 
-  getAgentTodayInterventions(agentId: string, excludeId?: string): Intervention[] {
-    const today = new Date().toISOString().split('T')[0];
+  // Autres interventions du même agent le même jour que l'intervention excludeId
+  // (pas "aujourd'hui" : sinon une intervention d'un jour passé se compare à la
+  // date du jour réelle au lieu de sa propre date).
+  getAgentSameDayInterventions(agentId: string, excludeId?: string): Intervention[] {
+    const current = this._data().find(i => i.id === excludeId);
+    const day = (current?.dateDebut ?? new Date().toISOString()).slice(0, 10);
     return this._data().filter(i =>
       i.agentId === agentId &&
-      i.dateDebut.startsWith(today) &&
+      i.dateDebut.slice(0, 10) === day &&
       i.id !== excludeId
     );
   }

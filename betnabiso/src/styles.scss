@@ -293,6 +293,9 @@ html.dark-mode {
   --border: #334155;
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
+  --primary: #7dd3fc;
+  --primary-light: #64b5f6;
+  --surface-alt: #253347;
   --shadow: 0 2px 12px rgba(0,0,0,0.4);
 
   background-color: #0f172a;
@@ -448,7 +451,170 @@ html.dark-mode {
   .stat-mini { background: #253347 !important; color: #e2e8f0 !important; }
 
   /* ─ Chips / badges ──────────────────── */
-  .status-chip { filter: brightness(0.9) saturate(0.85); }
+  .status-chip {
+    &.actif, &.terminee { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+    &.inactif, &.echec { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+    &.en-attente, &.assignee { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; }
+    &.redeploye { background: rgba(2,119,189,0.22) !important; color: #64b5f6 !important; }
+    &.a-redeployer { background: rgba(191,54,12,0.22) !important; color: #ff8a65 !important; border-color: rgba(255,138,101,0.4) !important; }
+    &.acceptee, &.en-cours { background: rgba(21,101,192,0.22) !important; color: #64b5f6 !important; }
+  }
+
+  /* ─ Classement techniciens (dashboard) ─ */
+  .rank-row {
+    background: #253347 !important;
+    &.is-me { background: rgba(100,181,246,0.15) !important; border-color: #64b5f6 !important; }
+  }
+  .rank-bar-wrap { background: #334155 !important; }
+  .rank-rate {
+    &.rate-good { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+    &.rate-mid  { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; }
+    &.rate-low  { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  }
+  .ranking-legend { border-top-color: #334155 !important; }
+
+  /* ─ Missions internes : titre de mission dans la liste/tableau ─ */
+  .mission-titre { color: #7dd3fc !important; }
+  /* Le composant utilise .statut-chip (avec accents) alors que .status-chip (sans accents)
+     est la classe couverte plus haut — les deux noms coexistent dans le code, donc on
+     couvre aussi celui-ci pour ne rien manquer. */
+  .statut-chip {
+    &.assignée, &.en_cours { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; }
+    &.acceptée { background: rgba(57,73,171,0.22) !important; color: #9fa8da !important; }
+    &.terminée { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+    &.refusée { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  }
+  .overdue-badge { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  .m-card { background: #253347 !important; }
+  .desc-cell, .mc-desc { color: #94a3b8 !important; }
+  .prio-haute { color: #ef9a9a !important; }
+  .row-overdue td { background: rgba(230,81,0,0.12) !important; }
+  .row-urgent td  { background: rgba(198,40,40,0.12) !important; }
+
+  /* ─ Titres de page génériques (plusieurs composants redéfinissent
+     localement .page-header h1 / .title-icon en #1a3a5c) ─ */
+  .page-header h1, .title-icon { color: #7dd3fc !important; }
+
+  /* ─ Agents : bandeau de surveillance machines ─ */
+  .monitor-bar { background: #1e293b !important; border-color: #334155 !important; }
+  .monitor-title { color: #e2e8f0 !important; }
+  .mstat-num { color: #81c784 !important; }
+  .mstat-neutral .mstat-num { color: #94a3b8 !important; }
+  .mstat-sep { background: #334155 !important; }
+  .mstat-clickable:hover { background: rgba(76,175,80,0.15) !important; }
+  .mstat-clickable.mstat-warn:hover { background: rgba(230,81,0,0.15) !important; }
+  .mstat-active { background: rgba(76,175,80,0.22) !important; }
+  .mstat-warn.mstat-active { background: rgba(230,81,0,0.22) !important; }
+  .machine-filter-chip { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+  .machine-filter-chip-warn { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; }
+  .redeploie-vers { color: #64b5f6 !important; }
+
+  /* ─ Interventions / Support : badges de déplacement, priorité, actions ─ */
+  .day-badge { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; border-color: rgba(255,183,77,0.4) !important; }
+  .prio-dot.haute { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  .prio-dot.normale { background: rgba(21,101,192,0.22) !important; color: #64b5f6 !important; }
+  .prio-dot.basse { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+  .dep-badge:not(.dep-warn):not(.dep-active):not(.dep-done):not(.dep-refuse) { background: rgba(106,27,154,0.22) !important; color: #ce93d8 !important; }
+  .dep-badge.dep-warn { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; border-color: rgba(255,183,77,0.4) !important; }
+  .dep-badge.dep-active { background: rgba(21,101,192,0.22) !important; color: #64b5f6 !important; border-color: rgba(100,181,246,0.4) !important; }
+  .dep-badge.dep-done { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; border-color: rgba(129,199,132,0.4) !important; }
+  .dep-badge.dep-refuse { background: rgba(255,255,255,0.08) !important; color: #94a3b8 !important; border-color: #334155 !important; }
+  .chrono-badge { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; }
+  .btn-terminee { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+  .btn-echec { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  .btn-dep, .dep-menu-item, .dep-menu-item mat-icon { color: #ce93d8 !important; }
+  .dep-pending-tag { background: rgba(106,27,154,0.22) !important; color: #ce93d8 !important; }
+  .dep-valide-tag { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+  .dep-refuse-tag { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  .dep-done-tag { background: rgba(2,119,189,0.22) !important; color: #64b5f6 !important; }
+  .row-assignee, .int-card.row-assignee { background: rgba(245,124,0,0.10) !important; }
+  .row-en-cours, .int-card.row-en-cours { background: rgba(21,101,192,0.10) !important; }
+  .row-deplacement, .int-card.row-deplacement { background: rgba(156,39,176,0.10) !important; }
+  .chauffeur-card:hover { background: rgba(21,101,192,0.15) !important; border-color: #64b5f6 !important; }
+  .chauffeur-card.selected { background: rgba(21,101,192,0.22) !important; border-color: #64b5f6 !important; }
+  .agent-ref { color: #94a3b8 !important; }
+  .pending-notice { color: #ffb74d !important; }
+  .deplacement-notice { color: #ce93d8 !important; }
+  .highlight-banner { background: rgba(21,101,192,0.18) !important; color: #64b5f6 !important; border-color: rgba(100,181,246,0.4) !important; }
+  .assigned-by { color: #ffb74d !important; }
+
+  /* ─ Support : panneau techniciens ─ */
+  .tech-status.active { color: #81c784 !important; }
+  .load-badge.assignee { background: rgba(230,81,0,0.22) !important; color: #ffb74d !important; }
+  .load-badge.en-cours { background: rgba(21,101,192,0.22) !important; color: #64b5f6 !important; }
+  .depl-tech, .signal-msg { color: #cbd5e1 !important; }
+  .online-stat-chip, .tech-panel-online-badge { background: rgba(76,175,80,0.22) !important; color: #81c784 !important; }
+
+  /* ─ Historique & Rapports ─ */
+  .kpi-val, .stat-value { color: #e2e8f0 !important; }
+  .section-avatar.tech { background: rgba(76,175,80,0.22) !important; color: #81c784 !important; }
+  .section-avatar.support { background: rgba(66,165,245,0.22) !important; color: #64b5f6 !important; }
+  .section-avatar.chauffeur { background: rgba(255,167,38,0.22) !important; color: #ffb74d !important; }
+  thead tr { background: #162032 !important; }
+  th { color: #94a3b8 !important; }
+  td { color: #e2e8f0 !important; }
+  tbody tr:hover { background: rgba(255,255,255,0.05) !important; }
+  .role-tag.support { background: rgba(66,165,245,0.22) !important; color: #64b5f6 !important; }
+  .role-tag.admin, .role-tag.superadmin { background: rgba(171,71,188,0.22) !important; color: #ce93d8 !important; }
+  .chip.green, .eff-badge.low { background: rgba(76,175,80,0.22) !important; color: #81c784 !important; }
+  .chip.red, .eff-badge.high { background: rgba(239,83,80,0.22) !important; color: #ef9a9a !important; }
+  .chip.orange, .eff-badge.medium { background: rgba(255,167,38,0.22) !important; color: #ffb74d !important; }
+  .chip.blue { background: rgba(66,165,245,0.22) !important; color: #64b5f6 !important; }
+  .eff-count.low, .to-tech { color: #81c784 !important; }
+  .eff-count.medium { color: #ffb74d !important; }
+  .eff-count.high, .from-tech { color: #ef9a9a !important; }
+  .duration-chip.very-fast, .duration-chip.fast { background: rgba(76,175,80,0.22) !important; color: #81c784 !important; }
+  .duration-chip.medium { background: rgba(255,167,38,0.22) !important; color: #ffb74d !important; }
+  .duration-chip.long { background: rgba(239,83,80,0.22) !important; color: #ef9a9a !important; }
+  .progress-container, .stat-bar, .eff-bar { background: #334155 !important; }
+  .reass-search-input { background: #253347 !important; }
+  .date-cell { color: #94a3b8 !important; }
+  .details-cell { color: #e2e8f0 !important; }
+
+  /* ─ Utilisateurs ─ */
+  .pwd-btn mat-icon { color: #7dd3fc !important; }
+
+  /* ─ Notifications ─ */
+  .notif-title, .mark-all-btn, .notif-agent { color: #e2e8f0 !important; }
+  .notif-msg { color: #cbd5e1 !important; }
+  .notif-item.non_lue { background: rgba(100,181,246,0.15) !important; }
+  .filter-count { background: rgba(255,255,255,0.12) !important; color: #e2e8f0 !important; }
+  .filter-count.unread { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  .type-tag.dep { background: rgba(106,27,154,0.22) !important; color: #ce93d8 !important; }
+  .type-tag.pec { background: rgba(76,175,80,0.22) !important; color: #81c784 !important; }
+  .type-tag.modif, .type-tag.interv { background: rgba(66,165,245,0.22) !important; color: #64b5f6 !important; }
+  .type-tag.mission, .type-tag.planning { background: rgba(255,167,38,0.22) !important; color: #ffb74d !important; }
+  .type-tag.offline, .type-tag.signal { background: rgba(239,83,80,0.22) !important; color: #ef9a9a !important; }
+  .role-tag.technicien { color: #4db6ac !important; }
+
+  /* ─ Messagerie ─ */
+  .section-header, .create-group-header, .conv-header, .attach-preview { background: #253347 !important; }
+  .create-group-header { color: #e2e8f0 !important; }
+  .conv-header { border-color: #334155 !important; }
+  .u-role-tag { background: rgba(255,255,255,0.08) !important; color: #94a3b8 !important; }
+  .conversation-placeholder { background: #162032 !important; }
+  .messages-area { background: #0f172a !important; }
+
+  /* ─ Agents : fiche détail ─ */
+  .machine-box { background: #253347 !important; border-color: #334155 !important; }
+  .mb-name { color: #e2e8f0 !important; }
+  .mb-status-badge.m-on { background: rgba(46,125,50,0.22) !important; color: #81c784 !important; }
+  .mb-status-badge.m-off { background: rgba(198,40,40,0.22) !important; color: #ef9a9a !important; }
+  .mb-dup-warn { color: #ffb74d !important; }
+
+  /* ─ Planning : historique ─ */
+  .creneau-chip { background: rgba(148,163,184,0.15) !important; color: #94a3b8 !important; }
+
+  /* ─ Agenda ─ */
+  .group-title.overdue mat-icon { color: #ef9a9a !important; }
+  .group-title.today mat-icon { color: #ffb74d !important; }
+  .group-title.upcoming mat-icon { color: #64b5f6 !important; }
+  .group-title.done mat-icon { color: #81c784 !important; }
+
+  /* ─ Outils & Utilitaires ─ */
+  .outil-card { background: #253347 !important; }
+  .icon-preview { color: #7dd3fc !important; }
+  .file-chip { background: #253347 !important; }
 
   /* ─ Icon colors ─────────────────────── */
   /* Default icons to secondary color, but don't override colored buttons */

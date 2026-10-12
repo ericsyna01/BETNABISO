@@ -103,6 +103,9 @@ import { AgentNotif } from '../../core/models/notification.model';
             @if (n.photoUrl) {
               <img [src]="n.photoUrl" class="notif-photo" (click)="openPhoto(n.photoUrl!, $event)" alt="Photo de la panne">
             }
+            @if (n.audioUrl) {
+              <audio [src]="n.audioUrl" controls class="notif-audio" (click)="$event.stopPropagation()"></audio>
+            }
             @if (auth.isAdmin() || auth.isSupport()) {
               @if (n.statut !== 'traitée') {
                 <div class="notif-actions">
@@ -270,6 +273,7 @@ import { AgentNotif } from '../../core/models/notification.model';
       border-radius: 8px; cursor: pointer; object-fit: cover;
       border: 1px solid #e2e8f0;
     }
+    .notif-audio { display: block; width: 100%; max-width: 260px; height: 32px; margin-top: 6px; }
 
     .notif-actions { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
     .btn-traiter { font-size: 11px; color: #2e7d32; min-width: 0; height: 28px; padding: 0 8px;

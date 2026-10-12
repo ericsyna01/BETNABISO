@@ -516,7 +516,7 @@ export class AssignInterventionComponent implements OnInit {
   agentDayHistory = computed(() => {
     const agent = this.selectedAgent();
     if (!agent) return [];
-    return this.interventionSvc.getAgentTodayInterventions(agent.id, this.editId() ?? undefined);
+    return this.interventionSvc.getAgentSameDayInterventions(agent.id, this.editId() ?? undefined);
   });
   filteredAgents = signal<Agent[]>([]);
   private allAgents: Agent[] = [];

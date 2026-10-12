@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { NotificationService } from '../../core/services/notification.service';
 import { MissionService } from '../../core/services/mission.service';
 import { InterventionService } from '../../core/services/intervention.service';
@@ -12,12 +13,13 @@ interface TickerItem {
   label: string;
   route: string[];
   queryParams?: Record<string, string>;
+  notifId?: string;
 }
 
 @Component({
   selector: 'app-requests-ticker',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, MatTooltipModule],
   template: `
     @if (visible()) {
       <div class="ticker-bar">
@@ -32,6 +34,9 @@ interface TickerItem {
               <span class="ticker-item" (click)="goTo(n)">
                 <mat-icon>{{ n.icon }}</mat-icon>
                 {{ n.label }}
+                @if (n.notifId) {
+                  <mat-icon class="ticker-dismiss" matTooltip="Marquer comme traitée" (click)="dismiss($event, n)">close</mat-icon>
+                }
               </span>
             }
             <!-- copie dupliquée pour une boucle continue sans coupure -->
@@ -39,6 +44,9 @@ interface TickerItem {
               <span class="ticker-item" (click)="goTo(n)" aria-hidden="true">
                 <mat-icon>{{ n.icon }}</mat-icon>
                 {{ n.label }}
+                @if (n.notifId) {
+                  <mat-icon class="ticker-dismiss" matTooltip="Marquer comme traitée" (click)="dismiss($event, n)">close</mat-icon>
+                }
               </span>
             }
           </div>
@@ -69,6 +77,10 @@ interface TickerItem {
       color: #7b4a00; cursor: pointer; white-space: nowrap; flex-shrink: 0;
       &:hover { text-decoration: underline; }
       mat-icon { font-size: 15px; width: 15px; height: 15px; color: #e65100; }
+    }
+    .ticker-dismiss {
+      color: #a1887f !important; margin-left: 2px; border-radius: 50%;
+      &:hover { background: rgba(0,0,0,.08); color: #5d4037 !important; }
     }
     @keyframes ticker-scroll {
       from { transform: translateX(0); }
@@ -147,5 +159,10 @@ export class RequestsTickerComponent {
 
   goTo(item: TickerItem): void {
     this.router.navigate(item.route, { queryParams: item.queryParams ?? {} });
+  }
+
+  dismiss(event: Event, item: TickerItem): void {
+    event.stopPropagation();
+    if (item.notifId) this.notifSvc.markTraitee(item.notifId);
   }
 }

@@ -10,11 +10,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { PlanningService, getISOWeek, getWeekDates } from '../../core/services/planning.service';
 import { UserService } from '../../core/services/user.service';
 import { CreneauService } from '../../core/services/creneau.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { PlanningEntry } from '../../core/models/planning.model';
 
 const JOURS_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MOIS_FR  = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc'];
 const FALLBACK_COLOR = { texte: '#546e7a', fond: '#eceff1' };
+const FALLBACK_COLOR_DARK = { texte: '#94a3b8', fond: 'rgba(148,163,184,0.15)' };
 
 interface EntryRow extends PlanningEntry {
   dayName: string;
@@ -195,6 +197,7 @@ export class PlanningHistoryComponent {
   private planningSvc = inject(PlanningService);
   private userSvc     = inject(UserService);
   private creneauSvc  = inject(CreneauService);
+  private themeSvc    = inject(ThemeService);
 
   search       = signal('');
   filterUserId = signal('');
@@ -206,7 +209,8 @@ export class PlanningHistoryComponent {
 
   creneauColor(type: string) {
     const c = this.creneaux().find(x => x.label === type);
-    return c ? { texte: c.couleurTexte, fond: c.couleurFond } : FALLBACK_COLOR;
+    if (c) return { texte: c.couleurTexte, fond: c.couleurFond };
+    return this.themeSvc.dark() ? FALLBACK_COLOR_DARK : FALLBACK_COLOR;
   }
 
   private filteredEntries = computed(() => {

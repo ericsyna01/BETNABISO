@@ -20,6 +20,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { HeartbeatService, AgentMachineStatus, formatMinutesAgo } from '../../../core/services/heartbeat.service';
 import { SseService } from '../../../core/services/sse.service';
 import { Subscription } from 'rxjs';
+import * as QRCode from 'qrcode';
 import { Agent } from '../../../core/models/agent.model';
 import { Intervention } from '../../../core/models/intervention.model';
 
@@ -55,6 +56,160 @@ export class AgentNotifDialogComponent {
   message = '';
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function fitFontSize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, startSize: number, family: string, minSize = 28): number {
+  let size = startSize;
+  ctx.font = `700 ${size}px ${family}`;
+  while (ctx.measureText(text).width > maxWidth && size > minSize) {
+    size -= 2;
+    ctx.font = `700 ${size}px ${family}`;
+  }
+  return size;
+}
+
+/** Affiche brandée BETNABISO (portrait, utilisable en fond d'écran) : logo, accroche, QR, agent/zone. */
+async function buildQrPoster(url: string, agentNom: string, agentZone: string): Promise<string> {
+  const W = 1080, H = 1700;
+  const BLACK = '#020202', GOLD = '#d4af37', CREAM = '#b3a88a';
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+  const FONT = 'Arial, Helvetica, sans-serif';
+
+  // Fond (même noir quasi-pur que le logo, pour une jonction invisible)
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, 0, W, 14);
+
+  const [logo, qrImg] = await Promise.all([
+    loadImage('logo.png'),
+    loadImage(await QRCode.toDataURL(url, { width: 800, margin: 1, color: { dark: '#141414', light: '#ffffff' } })),
+  ]);
+  const logoSize = 300;
+  ctx.drawImage(logo, (W - logoSize) / 2, 80, logoSize, logoSize);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = GOLD;
+  ctx.font = `700 44px ${FONT}`;
+  ctx.fillText('BETNABISO', W / 2, 434);
+
+  ctx.font = `800 62px ${FONT}`;
+  ctx.fillText('SCANNEZ-MOI', W / 2, 514);
+  ctx.fillText('EN CAS DE PANNE', W / 2, 586);
+
+  const nameSize = fitFontSize(ctx, agentNom, W - 100, 50, FONT, 26);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `700 ${nameSize}px ${FONT}`;
+  ctx.fillText(agentNom, W / 2, 664);
+
+  ctx.fillStyle = CREAM;
+  ctx.font = `500 34px ${FONT}`;
+  ctx.fillText(agentZone, W / 2, 716);
+
+  const qrSize = 640, qrX = (W - qrSize) / 2, qrY = 784;
+  ctx.save();
+  ctx.shadowColor = 'rgba(212,175,55,0.25)';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, qrX - 30, qrY - 30, qrSize + 60, qrSize + 60, 24);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 4;
+  roundRect(ctx, qrX - 30, qrY - 30, qrSize + 60, qrSize + 60, 24);
+  ctx.stroke();
+  ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `700 36px ${FONT}`;
+  ctx.fillText('Ouvrez l\'appareil photo de votre téléphone', W / 2, qrY + qrSize + 70);
+  ctx.font = `500 28px ${FONT}`;
+  ctx.fillStyle = CREAM;
+  ctx.fillText('et visez ce QR code pour signaler une panne', W / 2, qrY + qrSize + 112);
+
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, H - 14, W, 14);
+  ctx.fillStyle = CREAM;
+  ctx.font = `400 22px ${FONT}`;
+  ctx.fillText(url.replace(/^https?:\/\//, ''), W / 2, H - 50);
+
+  return canvas.toDataURL('image/png');
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+@Component({
+  selector: 'app-agent-qr-dialog',
+  standalone: true,
+  imports: [MatDialogModule, MatButtonModule, MatIconModule],
+  template: `
+    <h2 mat-dialog-title>
+      <mat-icon style="color:#171310;vertical-align:middle;margin-right:6px">qr_code_2</mat-icon>
+      QR code — {{ data.agentNom }}
+    </h2>
+    <mat-dialog-content class="qr-content">
+      @if (dataUrl()) {
+        <img [src]="dataUrl()!" alt="Affiche QR code de signalement" class="qr-img">
+        <p class="qr-hint">Affiche prête à imprimer ou à utiliser en fond d'écran sur site.</p>
+      } @else if (error()) {
+        <mat-icon style="color:#c62828">error_outline</mat-icon>
+        <p class="qr-hint">Échec de la génération du QR code. Réessayez.</p>
+      } @else {
+        <p>Génération en cours…</p>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-stroked-button mat-dialog-close>Fermer</button>
+      <button mat-raised-button color="primary" [disabled]="!dataUrl()" (click)="download()">
+        <mat-icon>download</mat-icon> Télécharger (PNG)
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .qr-content { display:flex; flex-direction:column; align-items:center; gap:12px; min-width:280px; }
+    .qr-img { width:260px; height:409px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.15); }
+    .qr-hint { font-size:12px; color:var(--text-secondary); text-align:center; margin:0; }
+  `]
+})
+export class AgentQrDialogComponent implements OnInit {
+  data = inject<{ agentNom: string; agentZone: string; url: string }>(MAT_DIALOG_DATA);
+  dataUrl = signal<string | null>(null);
+  error = signal(false);
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.dataUrl.set(await buildQrPoster(this.data.url, this.data.agentNom, this.data.agentZone));
+    } catch {
+      this.error.set(true);
+    }
+  }
+
+  download(): void {
+    const a = document.createElement('a');
+    a.href = this.dataUrl()!;
+    a.download = `qr-${this.data.agentNom}.png`;
+    a.click();
+  }
+}
+
 @Component({
   selector: 'app-agent-detail',
   standalone: true,
@@ -85,6 +240,9 @@ export class AgentNotifDialogComponent {
           @if ((auth.isAdmin() || auth.isSupport() || auth.isTechnicien()) && agent()?.publicToken) {
             <button mat-stroked-button (click)="copySelfServiceLink()" matTooltip="Lien à donner à l'agent pour signaler une panne sans passer par le support">
               <mat-icon>link</mat-icon> Lien de signalement
+            </button>
+            <button mat-stroked-button (click)="showQrCode()" matTooltip="QR code du lien de signalement, à imprimer/afficher sur site">
+              <mat-icon>qr_code_2</mat-icon> QR code
             </button>
           }
           @if ((auth.isAdmin() || auth.isSupport() || auth.isTechnicien()) && agent()) {
@@ -664,5 +822,14 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
     const url = `${window.location.origin}/#/signaler/${token}`;
     navigator.clipboard.writeText(url);
     this.snack.open('Lien de signalement copié ✓', 'OK', { duration: 2500, panelClass: 'success-snack' });
+  }
+
+  showQrCode(): void {
+    const token = this.agent()?.publicToken;
+    const nom = this.agent()?.nomAgent;
+    if (!token || !nom) return;
+    const url = `${window.location.origin}/#/signaler/${token}`;
+    const zone = this.agent()?.zone ?? '';
+    this.dialog.open(AgentQrDialogComponent, { width: '340px', data: { agentNom: nom, agentZone: zone, url } });
   }
 }

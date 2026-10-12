@@ -419,16 +419,16 @@ type Period = 'month' | 'trimestre' | 'all';
                   <mat-form-field appearance="outline">
                     <mat-label>Date début</mat-label>
                     <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="pickerDebut" [(ngModel)]="pickerDebut" placeholder="jj/mm/aaaa">
-                    <mat-datepicker-toggle matIconSuffix [for]="pickerDebut"></mat-datepicker-toggle>
-                    <mat-datepicker #pickerDebut></mat-datepicker>
+                    <input matInput [matDatepicker]="pickerDebutCal" [(ngModel)]="pickerDebut" placeholder="jj/mm/aaaa" readonly>
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerDebutCal"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerDebutCal></mat-datepicker>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Date fin</mat-label>
                     <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="pickerFin" [(ngModel)]="pickerFin" placeholder="jj/mm/aaaa">
-                    <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
-                    <mat-datepicker #pickerFin></mat-datepicker>
+                    <input matInput [matDatepicker]="pickerFinCal" [(ngModel)]="pickerFin" placeholder="jj/mm/aaaa" readonly>
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerFinCal"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerFinCal></mat-datepicker>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Technicien</mat-label>
@@ -776,16 +776,16 @@ type Period = 'month' | 'trimestre' | 'all';
                   <mat-form-field appearance="outline">
                     <mat-label>Date début</mat-label>
                     <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="mPickerDebut" [(ngModel)]="mPickerDebut" placeholder="jj/mm/aaaa">
-                    <mat-datepicker-toggle matIconSuffix [for]="mPickerDebut"></mat-datepicker-toggle>
-                    <mat-datepicker #mPickerDebut></mat-datepicker>
+                    <input matInput [matDatepicker]="mPickerDebutCal" [(ngModel)]="mPickerDebut" placeholder="jj/mm/aaaa" readonly>
+                    <mat-datepicker-toggle matIconSuffix [for]="mPickerDebutCal"></mat-datepicker-toggle>
+                    <mat-datepicker #mPickerDebutCal></mat-datepicker>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Date fin</mat-label>
                     <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="mPickerFin" [(ngModel)]="mPickerFin" placeholder="jj/mm/aaaa">
-                    <mat-datepicker-toggle matIconSuffix [for]="mPickerFin"></mat-datepicker-toggle>
-                    <mat-datepicker #mPickerFin></mat-datepicker>
+                    <input matInput [matDatepicker]="mPickerFinCal" [(ngModel)]="mPickerFin" placeholder="jj/mm/aaaa" readonly>
+                    <mat-datepicker-toggle matIconSuffix [for]="mPickerFinCal"></mat-datepicker-toggle>
+                    <mat-datepicker #mPickerFinCal></mat-datepicker>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Technicien</mat-label>

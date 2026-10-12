@@ -366,6 +366,9 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
                     @if (n.photoUrl) {
                       <img [src]="n.photoUrl" class="signal-photo" (click)="openPhoto(n.photoUrl!)" alt="Photo de la panne">
                     }
+                    @if (n.audioUrl) {
+                      <audio [src]="n.audioUrl" controls class="signal-audio"></audio>
+                    }
                     <div class="signal-actions">
                       <button mat-stroked-button color="primary" class="signal-assign-btn" (click)="assignerSignalement(n)">
                         <mat-icon>engineering</mat-icon> Assigner
@@ -528,6 +531,7 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
     .signal-time { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
     .signal-msg { font-size: 12px; color: #555; line-height: 1.4; }
     .signal-photo { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; cursor: pointer; margin-top: 2px; }
+    .signal-audio { display: block; width: 100%; height: 32px; margin-top: 4px; }
     .signal-actions { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
     .signal-assign-btn { font-size: 12px !important; flex: 1; }
 
@@ -747,7 +751,7 @@ export class SupportComponent {
   }
 
   agentDayInterventions(agentId: string, excludeId: string): Intervention[] {
-    return this.interventionSvc.getAgentTodayInterventions(agentId, excludeId);
+    return this.interventionSvc.getAgentSameDayInterventions(agentId, excludeId);
   }
 
   agentDayTooltip(agentId: string, excludeId: string): string {

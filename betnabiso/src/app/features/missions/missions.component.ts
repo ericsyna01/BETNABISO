@@ -659,6 +659,11 @@ export class MissionDetailDialogComponent {
                       <mat-icon>play_circle</mat-icon> Forcer démarrage
                     </button>
                   }
+                  @if (m.statut === 'en_cours') {
+                    <button mat-menu-item (click)="terminer(m)" style="color:#2e7d32">
+                      <mat-icon>check_circle</mat-icon> Clôturer
+                    </button>
+                  }
                   @if (m.notes) {
                     <button mat-menu-item (click)="snackNotes(m)">
                       <mat-icon>chat_bubble_outline</mat-icon> Voir les notes
@@ -784,6 +789,11 @@ export class MissionDetailDialogComponent {
                     @if (m.statut === 'assignée') {
                       <button mat-menu-item (click)="updateStatut(m, 'en_cours')" style="color:#1565c0">
                         <mat-icon>play_circle</mat-icon> Forcer démarrage
+                      </button>
+                    }
+                    @if (m.statut === 'en_cours') {
+                      <button mat-menu-item (click)="terminer(m)" style="color:#2e7d32">
+                        <mat-icon>check_circle</mat-icon> Clôturer
                       </button>
                     }
                     @if (m.notes) {

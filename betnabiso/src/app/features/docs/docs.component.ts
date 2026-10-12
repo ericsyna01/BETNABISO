@@ -54,7 +54,7 @@ interface RoleDoc {
     <div class="hero-meta">
       <span class="meta-chip"><mat-icon>people</mat-icon> 4 profils</span>
       <span class="meta-chip"><mat-icon>article</mat-icon> Guide complet</span>
-      <span class="meta-chip"><mat-icon>new_releases</mat-icon> Mise à jour — Juillet 2026</span>
+      <span class="meta-chip"><mat-icon>new_releases</mat-icon> Mise à jour — Août 2026</span>
     </div>
   </div>
 
@@ -706,6 +706,43 @@ export class DocsComponent {
             'Gérer les catégories : Administration → « Types » → onglet « Catégories d\'outils ».',
           ]
         },
+
+        // ── Août 2026 ─────────────────────────────────────────────
+        {
+          id: 'nv-mission-cloture-admin',
+          icon: 'check_circle',
+          title: 'Clôture des missions internes par les administrateurs',
+          content: 'Le Super Admin et les Admins peuvent désormais <strong>clôturer eux-mêmes</strong> une mission interne « En cours », sans devoir attendre que le technicien ou le chauffeur assigné le fasse.',
+          steps: [
+            { icon: 'more_vert', title: 'Ouvrir le menu d\'actions', detail: 'Missions internes → icône ⋮ sur la ligne de la mission « En cours ».' },
+            { icon: 'check_circle', title: 'Clôturer', detail: '« Clôturer » → une note de clôture facultative peut être ajoutée → confirmer.' },
+          ],
+          tips: [
+            'L\'option n\'apparaît que pour les missions au statut « En cours ».',
+          ]
+        },
+        {
+          id: 'nv-rapport-rename',
+          icon: 'label',
+          title: 'Le menu « Historique » devient « Rapport »',
+          content: 'Dans la barre latérale, l\'entrée de menu <strong>« Historique »</strong> a été renommée en <strong>« Rapport »</strong>. La page (Historique & Rapports, filtres, journal détaillé, exports) reste identique — seul le libellé du menu change.',
+        },
+        {
+          id: 'nv-observations',
+          icon: 'chat_bubble_outline',
+          title: 'Observations du technicien visibles sur les interventions',
+          content: 'La note d\'observation qu\'un technicien laisse en clôturant ou en signalant l\'échec d\'une intervention est désormais <strong>consultable directement dans la liste</strong> — jusqu\'ici elle n\'était visible que dans l\'export CSV du Rapport.',
+          tips: [
+            'Une icône 💬 apparaît dans la colonne Statut lorsqu\'une observation existe.',
+            'Survoler (ou toucher sur mobile) l\'icône affiche le texte complet en infobulle.',
+          ]
+        },
+        {
+          id: 'nv-interventions-sort',
+          icon: 'sort',
+          title: 'Tri par défaut des interventions : plus récentes en premier',
+          content: 'La liste des interventions s\'ouvre désormais triée par <strong>date décroissante</strong> par défaut (les entrées du jour en haut), au lieu d\'un tri mixte par priorité/statut qui ne mettait pas systématiquement en avant les dernières interventions.',
+        },
       ]
     },
 
@@ -729,7 +766,7 @@ export class DocsComponent {
             { icon: 'language', title: 'Ouvrir le navigateur', detail: 'Utiliser Chrome ou Firefox. L\'URL vous est communiquée par votre administrateur système.' },
             { icon: 'person', title: 'Saisir les identifiants', detail: 'Entrer votre login et mot de passe Super Admin. Les champs sont sensibles à la casse.' },
             { icon: 'lock_open', title: 'Valider', detail: 'Cliquer sur « Se connecter ». Vous êtes redirigé vers le tableau de bord global.' },
-            { icon: 'menu', title: 'Barre latérale complète', detail: 'Toutes les rubriques du menu sont visibles : Agents, Interventions, Support, Historique, Administration, Audit, Carte...' },
+            { icon: 'menu', title: 'Barre latérale complète', detail: 'Toutes les rubriques du menu sont visibles : Agents, Interventions, Support, Rapport, Administration, Audit, Carte...' },
           ],
           tips: [
             'La session reste active jusqu\'à déconnexion manuelle — pensez à vous déconnecter sur poste partagé.',
@@ -781,6 +818,21 @@ export class DocsComponent {
           warnings: [
             'La suppression d\'un agent est <strong>définitive</strong> et ne peut pas être annulée.',
             'Changer le statut vers « Redéployé » ouvre automatiquement la boîte de dialogue de sélection de la destination.',
+          ]
+        },
+        {
+          id: 'sa-qr',
+          icon: 'qr_code_2',
+          title: 'QR code de signalement',
+          content: 'Chaque agent dispose d\'un <strong>lien de signalement</strong> personnel (sans connexion requise) permettant à l\'agent de signaler lui-même une panne. Ce lien peut être généré en affiche QR, à imprimer ou afficher sur site.',
+          steps: [
+            { icon: 'person', title: 'Ouvrir la fiche agent', detail: 'Agents → cliquer sur un agent pour ouvrir sa fiche détaillée.' },
+            { icon: 'qr_code_2', title: 'Générer le QR code', detail: 'Bouton « QR code » en haut de la fiche → une affiche avec logo, accroche et QR code est générée.' },
+            { icon: 'download', title: 'Télécharger et diffuser', detail: '« Télécharger (PNG) » → imprimer l\'affiche ou l\'utiliser en fond d\'écran sur le poste de l\'agent.' },
+          ],
+          tips: [
+            'Le bouton « Lien de signalement » copie la même URL en texte, sans le visuel — utile pour l\'envoyer par SMS ou WhatsApp.',
+            'Scanner le QR ouvre directement le formulaire de signalement avec l\'agent et la zone déjà reconnus, sans mot de passe.',
           ]
         },
         {
@@ -873,7 +925,7 @@ export class DocsComponent {
           content: 'Générez des exports PDF réels (A4 paysage, en-tête coloré, tableau formaté) et CSV depuis la liste des agents ou l\'historique des interventions.',
           steps: [
             { icon: 'people', title: 'Export agents', detail: 'Agents → appliquer les filtres souhaités → bouton « Export PDF » (fichier téléchargé directement) ou « Export CSV ».' },
-            { icon: 'history', title: 'Export interventions', detail: 'Historique → filtrer par période → « Exporter ». Le PDF inclut date et numérotation de pages.' },
+            { icon: 'history', title: 'Export interventions', detail: 'Rapport → filtrer par période → « Exporter ». Le PDF inclut date et numérotation de pages.' },
             { icon: 'assessment', title: 'Rapport productivité', detail: 'Menu → « Rapport productivité » (Super Admin uniquement) → vue mensuelle par technicien avec export PDF multi-sections.' },
           ],
           tips: [
@@ -926,6 +978,19 @@ export class DocsComponent {
           ]
         },
         {
+          id: 'az-qr',
+          icon: 'qr_code_2',
+          title: 'QR code de signalement',
+          content: 'Chaque agent dispose d\'un lien de signalement personnel, sans connexion requise. Générez-le en affiche QR pour que l\'agent puisse signaler lui-même une panne en scannant.',
+          steps: [
+            { icon: 'person', title: 'Ouvrir la fiche agent', detail: 'Fiche de l\'agent → bouton « QR code » en haut de page.' },
+            { icon: 'download', title: 'Télécharger et afficher', detail: '« Télécharger (PNG) » → imprimer l\'affiche ou l\'afficher sur le poste de l\'agent, dans votre zone.' },
+          ],
+          tips: [
+            'Le bouton « Lien de signalement » copie la même URL en texte — pratique pour l\'envoyer par SMS ou WhatsApp.',
+          ]
+        },
+        {
           id: 'az-interventions',
           icon: 'build',
           title: 'Interventions de ma Zone',
@@ -934,7 +999,7 @@ export class DocsComponent {
             { icon: 'assignment', title: 'Liste des interventions', detail: 'Menu → « Toutes les interventions ». Liste filtrée automatiquement sur votre zone.' },
             { icon: 'add_circle', title: 'Créer une intervention', detail: '« + Nouvelle » → choisir l\'agent concerné (dans votre zone), type, priorité, description.' },
             { icon: 'person_add', title: 'Assigner à un technicien', detail: 'Champ autocomplete → taper le nom du technicien → sélectionner. L\'intervention passe en « Assignée ».' },
-            { icon: 'history', title: 'Consulter l\'historique', detail: 'Menu → « Historique » → filtrer par période ou technicien.' },
+            { icon: 'history', title: 'Consulter l\'historique', detail: 'Menu → « Rapport » → filtrer par période ou technicien.' },
           ],
           table: {
             headers: ['Statut intervention', 'Signification', 'Action possible'],
@@ -969,7 +1034,7 @@ export class DocsComponent {
           content: 'Exportez les données de votre zone pour vos rapports internes.',
           steps: [
             { icon: 'people', title: 'Export agents de ma zone', detail: 'Agents → les données exportées (PDF/CSV) contiennent uniquement votre zone.' },
-            { icon: 'history', title: 'Export historique', detail: 'Historique → filtrer → exporter la période souhaitée.' },
+            { icon: 'history', title: 'Export historique', detail: 'Rapport → filtrer → exporter la période souhaitée.' },
           ]
         },
       ]
@@ -1041,6 +1106,16 @@ export class DocsComponent {
           tips: [
             'Utiliser la barre de recherche pour retrouver rapidement un agent par son ID AnyDesk.',
             'Si l\'agent n\'est pas joignable, vérifier le numéro de téléphone du responsable sur sa fiche.',
+          ]
+        },
+        {
+          id: 'tech-qr',
+          icon: 'qr_code_2',
+          title: 'QR code de signalement',
+          content: 'Sur la fiche d\'un agent, le bouton « QR code » génère une affiche avec un QR menant au formulaire de signalement de panne de cet agent — utile à laisser sur site après une intervention.',
+          steps: [
+            { icon: 'qr_code_2', title: 'Générer l\'affiche', detail: 'Fiche agent → « QR code » → « Télécharger (PNG) ».' },
+            { icon: 'print', title: 'Imprimer ou afficher', detail: 'À coller sur la caisse ou le poste de l\'agent pour qu\'il puisse signaler une prochaine panne sans vous appeler directement.' },
           ]
         },
         {
@@ -1163,6 +1238,19 @@ export class DocsComponent {
           ],
           warnings: [
             'Le Support ne peut pas <strong>supprimer</strong> un agent ni modifier les zones — contacter un Admin ou Super Admin.',
+          ]
+        },
+        {
+          id: 'sup-qr',
+          icon: 'qr_code_2',
+          title: 'QR code de signalement',
+          content: 'Chaque agent a un lien de signalement personnel, sans connexion requise. Le bouton « QR code » sur sa fiche génère une affiche à imprimer ou afficher sur site.',
+          steps: [
+            { icon: 'person', title: 'Ouvrir la fiche agent', detail: 'Fiche de l\'agent → bouton « QR code » en haut de page.' },
+            { icon: 'download', title: 'Télécharger et diffuser', detail: '« Télécharger (PNG) » → imprimer ou envoyer à l\'agent.' },
+          ],
+          tips: [
+            'Le bouton « Lien de signalement » copie la même URL en texte, pratique pour l\'envoyer par SMS ou WhatsApp.',
           ]
         },
       ]

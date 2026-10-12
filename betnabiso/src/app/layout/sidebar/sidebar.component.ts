@@ -373,7 +373,7 @@ export class SidebarComponent {
     { label: 'Nouvelle intervention',    icon: 'add_circle',          route: '/interventions/new',  roles: ['technicien'],                    group: 'INTERVENTIONS' },
     /* Admin / Superadmin */
     { label: 'Toutes les interventions', icon: 'assignment',          route: '/interventions',      roles: ['superadmin', 'admin'],           group: 'INTERVENTIONS' },
-    { label: 'Historique',               icon: 'history',             route: '/history',            roles: ['superadmin', 'admin'],           group: 'INTERVENTIONS' },
+    { label: 'Rapport',                  icon: 'history',             route: '/history',            roles: ['superadmin', 'admin'],           group: 'INTERVENTIONS' },
     /* Chauffeur */
     { label: 'Mes missions',             icon: 'local_shipping',      route: '/chauffeur',          roles: ['chauffeur'],                     group: 'INTERVENTIONS' },
     /* Planning */

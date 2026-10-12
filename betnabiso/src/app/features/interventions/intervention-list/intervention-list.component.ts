@@ -355,6 +355,9 @@ export class DeplacementDialogComponent {
                     <mat-icon>directions_car</mat-icon> Déplacement
                   </span>
                 }
+                @if (i.observations) {
+                  <mat-icon class="obs-icon" [matTooltip]="i.observations" matTooltipClass="desc-tooltip">chat_bubble_outline</mat-icon>
+                }
               </div>
             </td>
           </ng-container>
@@ -529,6 +532,9 @@ export class DeplacementDialogComponent {
                   <span class="dep-badge" [matTooltip]="i.deplacementNote || 'Déplacement requis'">
                     <mat-icon>directions_car</mat-icon> Déplacement
                   </span>
+                }
+                @if (i.observations) {
+                  <mat-icon class="obs-icon" [matTooltip]="i.observations" matTooltipClass="desc-tooltip">chat_bubble_outline</mat-icon>
                 }
               </div>
               @if (i.description) {
@@ -737,6 +743,9 @@ export class DeplacementDialogComponent {
       background: #f3e5f5; border-radius: 4px; padding: 1px 5px;
       mat-icon { font-size: 12px; width: 12px; height: 12px; }
     }
+    .obs-icon {
+      font-size: 15px; width: 15px; height: 15px; color: #78909c; cursor: help;
+    }
 
     /* Actions technicien */
     .tech-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
@@ -855,7 +864,7 @@ export class InterventionListComponent implements OnDestroy {
   filterDeplacement = signal(false);
   filterDateFrom    = signal<Date | null>(null);
   filterDateTo      = signal<Date | null>(null);
-  sortCol           = signal<string>('');
+  sortCol           = signal<string>('dateDebut');
   sortDir           = signal<'asc' | 'desc'>('desc');
 
   toggleSort(col: string): void {
@@ -895,7 +904,8 @@ export class InterventionListComponent implements OnDestroy {
     this.filterDeplacement.set(false);
     this.filterDateFrom.set(null);
     this.filterDateTo.set(null);
-    this.sortCol.set('');
+    this.sortCol.set('dateDebut');
+    this.sortDir.set('desc');
     this.highlightId.set(null);
   }
 
@@ -985,7 +995,7 @@ export class InterventionListComponent implements OnDestroy {
   }
 
   agentDayInterventions(agentId: string, excludeId: string): Intervention[] {
-    return this.interventionSvc.getAgentTodayInterventions(agentId, excludeId);
+    return this.interventionSvc.getAgentSameDayInterventions(agentId, excludeId);
   }
 
   agentDayTooltip(agentId: string, excludeId: string): string {
