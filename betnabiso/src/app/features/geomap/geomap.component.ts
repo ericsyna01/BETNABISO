@@ -206,12 +206,12 @@ export class GeomapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.map = L.map('leaflet-map').setView([14.7, -17.4], 12);
     // tile.openstreetmap.org réserve son serveur à un usage léger/test et
     // bloque (403/429) le trafic d'applications en production comme celle-ci.
-    // CARTO fournit un fond de carte basé sur les mêmes données OSM, gratuit
-    // sans clé API, prévu pour ce type d'usage.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap contributors © CARTO',
+    // CARTO exige désormais une clé API même sur son offre gratuite (tuiles
+    // remplacées par un filigrane "API KEY REQUIRED"). Esri World Street Map
+    // reste accessible sans clé pour ce volume d'usage.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '© OpenStreetMap contributors, Esri',
       maxZoom: 18,
-      subdomains: 'abcd'
     }).addTo(this.map);
     // Le conteneur peut changer de taille après l'init (grille CSS pas encore
     // stabilisée, panneaux latéraux qui se remplissent de façon asynchrone,
