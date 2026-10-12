@@ -176,6 +176,14 @@ if ($m === 'GET') {
         $stmt->execute([$id]);
         $i = $stmt->fetch();
         if (!$i) respond(404, ['error' => 'Intervention non trouvée']);
+        // Un technicien/chauffeur ne peut pas lire le détail d'une intervention
+        // qui n'est pas la sienne en devinant simplement son id.
+        if ($current['role'] === 'technicien' && trim($i['technicienid'] ?? $i['technicienId'] ?? '') !== trim($current['user_id'])) {
+            respond(403, ['error' => 'Interdit']);
+        }
+        if ($current['role'] === 'chauffeur' && trim($i['chauffeurid'] ?? $i['chauffeurId'] ?? '') !== trim($current['user_id'])) {
+            respond(403, ['error' => 'Interdit']);
+        }
         enforceInterventionZone($current, $i['agentzone'] ?? $i['agentZone'] ?? null);
         respond(200, formatInterv($i));
     }
@@ -211,6 +219,9 @@ if (($m === 'POST' || $m === 'PATCH') && $id && $action) {
 }
 
 if ($m === 'POST') {
+    // Un chauffeur (ou tout autre rôle hors de cette liste) n'a aucune raison de
+    // créer une intervention ni de l'assigner à un technicien de son choix.
+    requireRole(['superadmin', 'admin', 'support', 'technicien'], $current);
     $b = body();
     // La vraie zone de l'agent vient de la table agents, pas de la valeur
     // envoyée par le client : sinon un admin scopé pourrait créer une
@@ -282,18 +293,26 @@ if ($m === 'POST') {
 }
 
 if ($m === 'PUT' && $id) {
-    $zoneChk = $db->prepare('SELECT "agentZone" FROM interventions WHERE id = ?');
+    $zoneChk = $db->prepare('SELECT "technicienId", "agentZone" FROM interventions WHERE id = ?');
     $zoneChk->execute([$id]);
     $zoneRow = $zoneChk->fetch();
     if (!$zoneRow) respond(404, ['error' => 'Intervention non trouvée']);
+    $isOwner = trim($zoneRow['technicienid'] ?? $zoneRow['technicienId'] ?? '') === trim($current['user_id'] ?? '');
+    $isAdmin = in_array($current['role'], ['superadmin', 'admin'], true);
+    if (!$isOwner && !$isAdmin) respond(403, ['error' => 'Interdit']);
     enforceInterventionZone($current, $zoneRow['agentzone'] ?? $zoneRow['agentZone'] ?? null);
     $b = body();
     $fields = []; $vals = [];
     $dateFields = ['assignedAt','datePlanifiee','dateDebut','dateFin','deplacementRequestedAt'];
-    $map = ['agentId','agentNom','agentZone','technicienId','technicienNom',
-            'assignedById','assignedByNom','assignedAt','priorite','datePlanifiee',
-            'type','dateDebut','dateFin','duree','description','statut','observations',
-            'pieceJointe','deplacementRequis','deplacementNote','deplacementRequestedBy','deplacementRequestedAt'];
+    // Un technicien ne peut faire avancer que SA PROPRE intervention (prise en
+    // charge, clôture, échec) : la réaffectation, le changement d'agent/priorité
+    // etc. restent réservés à admin/superadmin (ou à l'action dédiée "reassign").
+    $map = $isAdmin
+        ? ['agentId','agentNom','agentZone','technicienId','technicienNom',
+           'assignedById','assignedByNom','assignedAt','priorite','datePlanifiee',
+           'type','dateDebut','dateFin','duree','description','statut','observations',
+           'pieceJointe','deplacementRequis','deplacementNote','deplacementRequestedBy','deplacementRequestedAt']
+        : ['statut','dateDebut','dateFin','duree','observations'];
     foreach ($map as $f) {
         if (array_key_exists($f, $b)) {
             $fields[] = "\"$f\" = ?";
@@ -444,11 +463,13 @@ if ($m === 'PATCH' && $id) {
             'UPDATE interventions SET "deplacementValide"=1,"deplacementValideBy"=?,"deplacementValideAt"=NOW(),"chauffeurId"=?,"chauffeurNom"=? WHERE id=?'
         )->execute([$current['prenom'] . ' ' . $current['nom'], $b['chauffeurId'] ?? null, $b['chauffeurNom'] ?? null, $id]);
     } elseif ($action === 'refuser-deplacement') {
+        requireRole(['superadmin', 'admin'], $current);
         enforceInterventionZone($current, $interventionZone);
         $db->prepare(
             'UPDATE interventions SET "deplacementRefuse"=1,"deplacementValide"=0,"deplacementValideBy"=NULL,"deplacementValideAt"=NULL,"deplacementRefuseBy"=?,"chauffeurId"=NULL,"chauffeurNom"=NULL WHERE id=?'
         )->execute([$current['prenom'] . ' ' . $current['nom'], $id]);
     } elseif ($action === 'resolve-deplacement') {
+        requireRole(['superadmin', 'admin'], $current);
         enforceInterventionZone($current, $interventionZone);
         $db->prepare(
             'UPDATE interventions SET "deplacementRequis"=0,"deplacementNote"=NULL,"deplacementRequestedBy"=NULL,"deplacementRequestedAt"=NULL,"deplacementValide"=0,"deplacementValideBy"=NULL,"deplacementValideAt"=NULL,"deplacementRefuse"=0,"deplacementRefuseBy"=NULL,"deplacementTermine"=0,"chauffeurId"=NULL,"chauffeurNom"=NULL WHERE id=?'
