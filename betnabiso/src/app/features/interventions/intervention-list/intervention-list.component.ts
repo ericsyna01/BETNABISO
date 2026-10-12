@@ -304,6 +304,9 @@ export class DeplacementDialogComponent {
               <div class="type-cell">
                 <mat-icon>{{ typeIcon(i.type) }}</mat-icon>
                 {{ i.type }}
+                @if (i.viaSignalement) {
+                  <mat-icon class="signalement-icon" matTooltip="Créée depuis un signalement agent (QR code)">qr_code_2</mat-icon>
+                }
                 @if (i.pieceJointe) {
                   <img [src]="i.pieceJointe" class="attach-thumb-sm" (click)="openAttachment(i.pieceJointe)"
                        matTooltip="Photo jointe par l'agent" alt="Photo">
@@ -438,7 +441,7 @@ export class DeplacementDialogComponent {
                       <mat-icon>cancel</mat-icon> Marquer Échec
                     </button>
                   }
-                  @if (i.statut === 'En cours') {
+                  @if ((auth.isSuperadmin() || auth.isAdmin()) && i.statut === 'En cours') {
                     <button mat-menu-item (click)="markTerminee(i)">
                       <mat-icon>check_circle</mat-icon> Marquer Terminée
                     </button>
@@ -512,7 +515,12 @@ export class DeplacementDialogComponent {
                  [class.row-deplacement]="i.deplacementRequis">
               <div class="ic-top">
                 <div class="ic-date">{{ (i.datePlanifiee || i.dateDebut) | date:'dd/MM/yy HH:mm' }}</div>
-                <div class="type-cell"><mat-icon>{{ typeIcon(i.type) }}</mat-icon>{{ i.type }}</div>
+                <div class="type-cell">
+                  <mat-icon>{{ typeIcon(i.type) }}</mat-icon>{{ i.type }}
+                  @if (i.viaSignalement) {
+                    <mat-icon class="signalement-icon" matTooltip="Créée depuis un signalement agent (QR code)">qr_code_2</mat-icon>
+                  }
+                </div>
               </div>
               <a [routerLink]="['/agents', i.agentId]" class="agent-link ic-agent">{{ i.agentNom }}</a>
               <div class="sub-text">{{ i.agentZone }}</div>
@@ -596,7 +604,7 @@ export class DeplacementDialogComponent {
                       <button mat-menu-item (click)="markEnCours(i)"><mat-icon>play_circle</mat-icon> Marquer En cours</button>
                       <button mat-menu-item (click)="markEchec(i)"><mat-icon>cancel</mat-icon> Marquer Échec</button>
                     }
-                    @if (i.statut === 'En cours') {
+                    @if ((auth.isSuperadmin() || auth.isAdmin()) && i.statut === 'En cours') {
                       <button mat-menu-item (click)="markTerminee(i)"><mat-icon>check_circle</mat-icon> Marquer Terminée</button>
                       <button mat-menu-item (click)="markEchec(i)"><mat-icon>cancel</mat-icon> Marquer Échec</button>
                     }
@@ -692,6 +700,7 @@ export class DeplacementDialogComponent {
       mat-icon { font-size: 11px; width: 11px; height: 11px; }
     }
     .type-cell { display: flex; align-items: center; gap: 6px; mat-icon { font-size: 16px; color: var(--primary-light); } }
+    .signalement-icon { font-size: 15px !important; width: 15px !important; height: 15px !important; color: #e65100 !important; }
     .attach-thumb-sm { width: 26px; height: 26px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1px solid #e2e8f0; }
     .attach-thumb-mobile { width: 100%; max-height: 130px; object-fit: cover; border-radius: 8px; cursor: pointer; margin-top: 4px; }
     .desc-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
@@ -1031,6 +1040,8 @@ export class InterventionListComponent implements OnDestroy {
     const result = await this.interventionSvc.update(i.id, { statut: 'En cours', dateDebut: new Date().toISOString() });
     if (result) {
       this.snack.open('Intervention marquée En cours', 'OK', { duration: 2000, panelClass: 'success-snack' });
+    } else {
+      this.snack.open('Erreur lors de la mise à jour', 'OK', { duration: 3000, panelClass: 'error-snack' });
     }
   }
 
@@ -1154,23 +1165,31 @@ export class InterventionListComponent implements OnDestroy {
 
   async delete(i: Intervention): Promise<void> {
     if (!await this.confirmSvc.danger('Supprimer cette intervention ?', 'Supprimer l\'intervention')) return;
-    this.interventionSvc.delete(i.id);
-    this.snack.open('Intervention supprimée', 'OK', { duration: 2000, panelClass: 'success-snack' });
+    const ok = await this.interventionSvc.delete(i.id);
+    if (ok) {
+      this.snack.open('Intervention supprimée', 'OK', { duration: 2000, panelClass: 'success-snack' });
+    } else {
+      this.snack.open('Erreur lors de la suppression', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async cloner(i: Intervention): Promise<void> {
-    await this.interventionSvc.create({
-      agentId:       i.agentId,
-      agentNom:      i.agentNom,
-      agentZone:     i.agentZone,
-      technicienId:  i.technicienId,
-      technicienNom: i.technicienNom,
-      type:          i.type,
-      priorite:      i.priorite,
-      description:   `[Clone] ${i.description}`,
-      dateDebut:     new Date().toISOString(),
-      statut:        'Assignée',
-    });
-    this.snack.open('Intervention clonée et assignée', 'OK', { duration: 2500, panelClass: 'success-snack' });
+    try {
+      await this.interventionSvc.create({
+        agentId:       i.agentId,
+        agentNom:      i.agentNom,
+        agentZone:     i.agentZone,
+        technicienId:  i.technicienId,
+        technicienNom: i.technicienNom,
+        type:          i.type,
+        priorite:      i.priorite,
+        description:   `[Clone] ${i.description}`,
+        dateDebut:     new Date().toISOString(),
+        statut:        'Assignée',
+      });
+      this.snack.open('Intervention clonée et assignée', 'OK', { duration: 2500, panelClass: 'success-snack' });
+    } catch {
+      this.snack.open('Erreur lors du clonage', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 }

@@ -5,6 +5,22 @@ $db      = getDB();
 $id      = $GLOBALS['path_id'] ?? param('id');
 $action  = param('action');
 
+// Migration défensive : colonnes ajoutées après la mise en prod initiale de la table,
+// pour tracer les interventions créées à partir d'un signalement libre-service (QR code).
+try {
+    if (DB_DRIVER === 'pgsql') {
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "viaSignalement" BOOLEAN DEFAULT FALSE');
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "signalementNotifId" VARCHAR(64)');
+    } else {
+        if (!$db->query("SHOW COLUMNS FROM interventions LIKE 'viaSignalement'")->fetch()) {
+            $db->exec('ALTER TABLE interventions ADD COLUMN viaSignalement TINYINT(1) DEFAULT 0');
+        }
+        if (!$db->query("SHOW COLUMNS FROM interventions LIKE 'signalementNotifId'")->fetch()) {
+            $db->exec('ALTER TABLE interventions ADD COLUMN signalementNotifId VARCHAR(64)');
+        }
+    }
+} catch (Throwable $e) {}
+
 function auditLog(PDO $db, array $current, string $act, string $resId, string $details = ''): void {
     try {
         $db->prepare(
@@ -18,12 +34,24 @@ function auditLog(PDO $db, array $current, string $act, string $resId, string $d
     } catch (Exception $e) {}
 }
 
+/**
+ * Même principe que agents.php::enforceAgentZone — un admin scopé à une zone
+ * ne doit voir/modifier que les interventions des agents de SA zone.
+ */
+function enforceInterventionZone(array $current, ?string $agentZone): void {
+    if ($current['role'] !== 'admin' || empty($current['zone'])) return;
+    if (strcasecmp(trim($current['zone']), trim((string)$agentZone)) !== 0) {
+        respond(403, ['error' => 'Accès refusé : cette intervention n\'est pas dans votre zone']);
+    }
+}
+
 function formatInterv(array $i): array {
     $i = trimIds($i);
     $i['deplacementRequis']  = (bool)($i['deplacementrequis']  ?? $i['deplacementRequis']  ?? false);
     $i['deplacementValide']  = (bool)($i['deplacementvalide']  ?? $i['deplacementValide']  ?? false);
     $i['deplacementRefuse']  = (bool)($i['deplacementrefuse']  ?? $i['deplacementRefuse']  ?? false);
     $i['deplacementTermine'] = (bool)($i[strtolower('deplacementTermine')] ?? $i['deplacementTermine'] ?? false);
+    $i['viaSignalement']     = (bool)($i['viasignalement'] ?? $i['viaSignalement'] ?? false);
     // Normaliser les clés PostgreSQL (minuscules) en camelCase
     $camel = [
         'agentid'=>'agentId','agentnom'=>'agentNom','agentzone'=>'agentZone',
@@ -43,6 +71,7 @@ function formatInterv(array $i): array {
         'chauffeurid'=>'chauffeurId','chauffeurnom'=>'chauffeurNom',
         'updatedat'=>'updatedAt','piecejointe'=>'pieceJointe',
         'datepplanifiee'=>'datePlanifiee',
+        'viasignalement'=>'viaSignalement','signalementnotifid'=>'signalementNotifId',
     ];
     // Ajout dynamique de la clé lowercase pour deplacementTermine (MySQL retourne tout en minuscules)
     $camel[strtolower('deplacementTermine')] = 'deplacementTermine';
@@ -61,7 +90,7 @@ function formatInterv(array $i): array {
               'duree','observations','pieceJointe','deplacementNote',
               'deplacementRequestedBy','deplacementRequestedAt',
               'deplacementValideBy','deplacementValideAt',
-              'deplacementRefuseBy','chauffeurId','chauffeurNom'] as $f) {
+              'deplacementRefuseBy','chauffeurId','chauffeurNom','signalementNotifId'] as $f) {
         if (isset($out[$f]) && $out[$f] === '') $out[$f] = null;
     }
     if (isset($out['duree'])) $out['duree'] = $out['duree'] ? (int)$out['duree'] : null;
@@ -147,6 +176,7 @@ if ($m === 'GET') {
         $stmt->execute([$id]);
         $i = $stmt->fetch();
         if (!$i) respond(404, ['error' => 'Intervention non trouvée']);
+        enforceInterventionZone($current, $i['agentzone'] ?? $i['agentZone'] ?? null);
         respond(200, formatInterv($i));
     }
     $where = []; $vals = [];
@@ -157,6 +187,11 @@ if ($m === 'GET') {
         $where[] = '"deplacementRequis" = 1';
         $where[] = '"deplacementValide" = 1';
         $where[] = '"chauffeurId" = ?'; $vals[] = $current['user_id'];
+    }
+    // Idem agents.php : un admin scopé ne doit recevoir que les interventions
+    // de sa zone, pas seulement un affichage filtré côté client.
+    if ($current['role'] === 'admin' && !empty($current['zone'])) {
+        $where[] = 'LOWER("agentZone") = LOWER(?)'; $vals[] = $current['zone'];
     }
     foreach (['agentId','technicienId','agentZone','type','statut'] as $f) {
         $v = param($f);
@@ -183,8 +218,8 @@ if ($m === 'POST') {
     $db->prepare(
         'INSERT INTO interventions (id,"agentId","agentNom","agentZone","technicienId","technicienNom",
          "assignedById","assignedByNom","assignedAt",priorite,"datePlanifiee",type,"dateDebut",
-         description,statut,observations,"pieceJointe","updatedAt")
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
+         description,statut,observations,"pieceJointe","viaSignalement","signalementNotifId","updatedAt")
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
     )->execute([
         $newId,
         $b['agentId'], $b['agentNom'], $b['agentZone'] ?? null,
@@ -202,6 +237,8 @@ if ($m === 'POST') {
         $b['statut'] ?? 'Assignée',
         $b['observations'] ?? null,
         $b['pieceJointe'] ?? null,
+        !empty($b['viaSignalement']) ? 1 : 0,
+        $b['signalementNotifId'] ?? null,
     ]);
     $stmt = $db->prepare('SELECT * FROM interventions WHERE id = ?');
     $stmt->execute([$newId]);

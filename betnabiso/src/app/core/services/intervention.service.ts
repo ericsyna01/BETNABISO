@@ -102,6 +102,11 @@ export class InterventionService {
     ).length;
   }
 
+  // Interventions issues d'un signalement libre-service (QR code) pas encore prises en charge.
+  getSignalementPending(): Intervention[] {
+    return this._data().filter(i => i.viaSignalement && i.statut === 'Assignée');
+  }
+
   getDeplacementPending(): Intervention[] {
     return this._data().filter(i => i.deplacementRequis && !i.deplacementValide);
   }
@@ -193,15 +198,9 @@ export class InterventionService {
   }
 
   async create(data: Omit<Intervention, 'id'>): Promise<Intervention> {
-    try {
-      const interv = await firstValueFrom(this.http.post<Intervention>(API, data));
-      this.saveLocal([...this._data(), interv]);
-      return interv;
-    } catch {
-      const interv: Intervention = { ...data, id: crypto.randomUUID() } as Intervention;
-      this.saveLocal([...this._data(), interv]);
-      return interv;
-    }
+    const interv = await firstValueFrom(this.http.post<Intervention>(API, data));
+    this.saveLocal([...this._data(), interv]);
+    return interv;
   }
 
   async assign(data: {
@@ -234,11 +233,7 @@ export class InterventionService {
       const updated = await firstValueFrom(this.http.put<Intervention>(`${API}/${id}`, data));
       this.saveLocal(this._data().map(i => i.id === id ? updated : i));
       return updated;
-    } catch {
-      const items = this._data().map(i => i.id === id ? { ...i, ...data } : i);
-      this.saveLocal(items);
-      return items.find(i => i.id === id) ?? null;
-    }
+    } catch { return null; }
   }
 
   async requestDeployment(id: string, note: string, requestedBy: string): Promise<Intervention> {

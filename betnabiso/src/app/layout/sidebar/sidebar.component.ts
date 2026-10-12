@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { PresenceService } from '../../core/services/presence.service';
 import { LayoutService } from '../../core/services/layout.service';
@@ -23,7 +24,7 @@ interface NavEntry extends NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
     <aside class="sidebar" [class.open]="layoutSvc.sidebarOpen()">
       <div class="sidebar-logo" (click)="refresh()" style="cursor:pointer">
@@ -51,6 +52,9 @@ interface NavEntry extends NavItem {
             }
             @if ((item.route === '/interventions' || item.route === '/support') && interventionCount() > 0) {
               <span class="nav-badge warn">{{ interventionCount() }}</span>
+            }
+            @if ((item.route === '/interventions' || item.route === '/support') && signalementCount() > 0) {
+              <mat-icon class="nav-badge-icon" matTooltip="Intervention(s) issue(s) d'un signalement en attente">qr_code_2</mat-icon>
             }
           </a>
         }
@@ -231,6 +235,20 @@ interface NavEntry extends NavItem {
       flex-shrink: 0;
       &.warn { color: #ff9e4a; }
     }
+    @keyframes pulse-badge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    .nav-badge-icon {
+      margin-left: auto;
+      flex-shrink: 0;
+      font-size: 16px !important;
+      width: 16px !important;
+      height: 16px !important;
+      color: #ffb74d;
+      animation: pulse-badge 2s infinite;
+    }
 
     /* ── Bandeau utilisateurs en ligne ──── */
     .online-banner {
@@ -339,6 +357,8 @@ export class SidebarComponent {
     }
     return all.filter(i => i.statut === 'Assignée').length;
   });
+
+  signalementCount = computed(() => this.interventionSvc.getSignalementPending().length);
 
   missionCount = computed(() => {
     const user = this.auth.currentUser();

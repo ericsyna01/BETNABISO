@@ -36,6 +36,9 @@ export interface Intervention {
   deplacementTermine?: boolean;
   chauffeurId?: string;
   chauffeurNom?: string;
+  /* Traçabilité : intervention créée à partir d'un signalement libre-service (QR code) */
+  viaSignalement?: boolean;
+  signalementNotifId?: string;
 }
 
 export interface ReassignmentLog {

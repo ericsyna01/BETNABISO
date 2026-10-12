@@ -688,6 +688,8 @@ export class AssignInterventionComponent implements OnInit {
           assignedByNom: currentUser ? `${currentUser.prenom} ${currentUser.nom}` : undefined,
           assignedAt: new Date().toISOString(),
           pieceJointe: this.prefillPhotoUrl ?? undefined,
+          viaSignalement: !!this.prefillNotifId,
+          signalementNotifId: this.prefillNotifId ?? undefined,
         });
         // Le signalement agent à l'origine de cette affectation disparaît de
         // la liste "en attente" puisqu'il a maintenant une intervention créée.
