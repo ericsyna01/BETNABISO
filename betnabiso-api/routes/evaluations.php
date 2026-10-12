@@ -18,13 +18,17 @@ function logAudit(PDO $db, array $current, string $action, string $resource, str
 }
 
 // GET /evaluations?interventionId=xxx
+// Réservé à admin/superadmin dans les deux cas : ce sont des notes de qualité
+// internes sur une intervention/un technicien, pas une donnée que l'auteur de
+// l'intervention (technicien/chauffeur) devrait pouvoir lire pour un dossier
+// qui n'est pas le sien simplement en connaissant son id.
 if ($m === 'GET') {
+    requireRole(['superadmin','admin'], $current);
     $intId = param('interventionId');
     if ($intId) {
         $stmt = $db->prepare('SELECT * FROM evaluations WHERE "interventionId"=? ORDER BY "createdAt" DESC');
         $stmt->execute([$intId]);
     } else {
-        requireRole(['superadmin','admin'], $current);
         $stmt = $db->query('SELECT * FROM evaluations ORDER BY "createdAt" DESC');
     }
     $rows = $stmt->fetchAll();
@@ -45,10 +49,21 @@ if ($m === 'GET') {
 
 // POST /evaluations
 if ($m === 'POST') {
+    requireRole(['superadmin','admin'], $current);
     $b = body();
     if (empty($b['interventionId']) || empty($b['note'])) respond(400, ['error' => 'interventionId et note requis']);
     $note = (int)$b['note'];
     if ($note < 1 || $note > 5) respond(400, ['error' => 'note doit être entre 1 et 5']);
+
+    // agentId/agentNom décrivent l'intervention évaluée : on les relit depuis
+    // l'intervention elle-même plutôt que de faire confiance aux valeurs
+    // envoyées par le client, qui pourraient ne pas correspondre.
+    $iStmt = $db->prepare('SELECT "agentId","agentNom" FROM interventions WHERE id = ?');
+    $iStmt->execute([$b['interventionId']]);
+    $iRow = $iStmt->fetch();
+    if (!$iRow) respond(404, ['error' => 'Intervention introuvable']);
+    $agentId  = trim($iRow['agentid']  ?? $iRow['agentId']  ?? '');
+    $agentNom = $iRow['agentnom'] ?? $iRow['agentNom'] ?? '';
 
     $exists = $db->prepare('SELECT id FROM evaluations WHERE "interventionId"=? AND "evaluatedBy"=?');
     $exists->execute([$b['interventionId'], trim($current['user_id'])]);
@@ -61,7 +76,7 @@ if ($m === 'POST') {
              VALUES (?,?,?,?,?,?,?,?,NOW())'
         )->execute([
             bin2hex(random_bytes(16)),
-            $b['interventionId'], $b['agentId'] ?? '', $b['agentNom'] ?? '',
+            $b['interventionId'], $agentId, $agentNom,
             $note, $b['commentaire'] ?? null,
             trim($current['user_id']), $current['prenom'].' '.$current['nom'],
         ]);

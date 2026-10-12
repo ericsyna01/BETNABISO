@@ -212,6 +212,17 @@ if (($m === 'POST' || $m === 'PATCH') && $id && $action) {
 
 if ($m === 'POST') {
     $b = body();
+    // La vraie zone de l'agent vient de la table agents, pas de la valeur
+    // envoyée par le client : sinon un admin scopé pourrait créer une
+    // intervention pour un agent d'une autre zone en falsifiant agentZone.
+    $agentRow = null;
+    if (!empty($b['agentId'])) {
+        $agentStmt = $db->prepare('SELECT zone FROM agents WHERE id = ?');
+        $agentStmt->execute([$b['agentId']]);
+        $agentRow = $agentStmt->fetch();
+    }
+    if (!$agentRow) respond(404, ['error' => 'Agent introuvable']);
+    enforceInterventionZone($current, $agentRow['zone'] ?? null);
     $newId   = $b['id'] ?? bin2hex(random_bytes(16));
     $techId  = ($current['role'] === 'technicien') ? $current['user_id'] : ($b['technicienId'] ?? null);
     $techNom = ($current['role'] === 'technicien') ? ($current['prenom'] . ' ' . $current['nom']) : ($b['technicienNom'] ?? null);
@@ -222,7 +233,7 @@ if ($m === 'POST') {
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
     )->execute([
         $newId,
-        $b['agentId'], $b['agentNom'], $b['agentZone'] ?? null,
+        $b['agentId'], $b['agentNom'], $agentRow['zone'] ?? ($b['agentZone'] ?? null),
         $techId, $techNom,
         $b['assignedById'] ?? null, $b['assignedByNom'] ?? null,
         // Toujours dater l'affectation dès qu'un technicien est choisi à la création,
@@ -271,6 +282,11 @@ if ($m === 'POST') {
 }
 
 if ($m === 'PUT' && $id) {
+    $zoneChk = $db->prepare('SELECT "agentZone" FROM interventions WHERE id = ?');
+    $zoneChk->execute([$id]);
+    $zoneRow = $zoneChk->fetch();
+    if (!$zoneRow) respond(404, ['error' => 'Intervention non trouvée']);
+    enforceInterventionZone($current, $zoneRow['agentzone'] ?? $zoneRow['agentZone'] ?? null);
     $b = body();
     $fields = []; $vals = [];
     $dateFields = ['assignedAt','datePlanifiee','dateDebut','dateFin','deplacementRequestedAt'];
@@ -307,8 +323,18 @@ if ($m === 'PUT' && $id) {
 
 if ($m === 'PATCH' && $id) {
     $b = body();
+    // Zone de l'intervention ciblée, lue une seule fois : les actions
+    // réservées à admin/superadmin/support ci-dessous vérifient qu'un admin
+    // scopé n'agit pas sur une intervention hors de sa zone.
+    $zoneStmt = $db->prepare('SELECT "agentZone" FROM interventions WHERE id = ?');
+    $zoneStmt->execute([$id]);
+    $zoneRow = $zoneStmt->fetch();
+    if (!$zoneRow) respond(404, ['error' => 'Intervention non trouvée']);
+    $interventionZone = $zoneRow['agentzone'] ?? $zoneRow['agentZone'] ?? null;
+
     if ($action === 'assign') {
         requireRole(['superadmin', 'admin', 'support'], $current);
+        enforceInterventionZone($current, $interventionZone);
         $db->prepare(
             'UPDATE interventions SET "technicienId"=?,"technicienNom"=?,"assignedById"=?,"assignedByNom"=?,"assignedAt"=NOW(),statut=?,priorite=?,"datePlanifiee"=? WHERE id=?'
         )->execute([
@@ -318,6 +344,7 @@ if ($m === 'PATCH' && $id) {
         ]);
     } elseif ($action === 'reassign') {
         requireRole(['superadmin', 'admin', 'support'], $current);
+        enforceInterventionZone($current, $interventionZone);
         // Lire l'ancien technicien + date d'affectation avant la mise à jour
         $stmtOld = $db->prepare(
             'SELECT "technicienId" AS fromtechid, "technicienNom" AS fromtechnom,
@@ -412,14 +439,17 @@ if ($m === 'PATCH' && $id) {
         ]);
     } elseif ($action === 'valider-deplacement') {
         requireRole(['superadmin', 'admin'], $current);
+        enforceInterventionZone($current, $interventionZone);
         $db->prepare(
             'UPDATE interventions SET "deplacementValide"=1,"deplacementValideBy"=?,"deplacementValideAt"=NOW(),"chauffeurId"=?,"chauffeurNom"=? WHERE id=?'
         )->execute([$current['prenom'] . ' ' . $current['nom'], $b['chauffeurId'] ?? null, $b['chauffeurNom'] ?? null, $id]);
     } elseif ($action === 'refuser-deplacement') {
+        enforceInterventionZone($current, $interventionZone);
         $db->prepare(
             'UPDATE interventions SET "deplacementRefuse"=1,"deplacementValide"=0,"deplacementValideBy"=NULL,"deplacementValideAt"=NULL,"deplacementRefuseBy"=?,"chauffeurId"=NULL,"chauffeurNom"=NULL WHERE id=?'
         )->execute([$current['prenom'] . ' ' . $current['nom'], $id]);
     } elseif ($action === 'resolve-deplacement') {
+        enforceInterventionZone($current, $interventionZone);
         $db->prepare(
             'UPDATE interventions SET "deplacementRequis"=0,"deplacementNote"=NULL,"deplacementRequestedBy"=NULL,"deplacementRequestedAt"=NULL,"deplacementValide"=0,"deplacementValideBy"=NULL,"deplacementValideAt"=NULL,"deplacementRefuse"=0,"deplacementRefuseBy"=NULL,"deplacementTermine"=0,"chauffeurId"=NULL,"chauffeurNom"=NULL WHERE id=?'
         )->execute([$id]);

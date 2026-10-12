@@ -18,6 +18,21 @@ function auditAgent(PDO $db, array $current, string $act, string $agentId, strin
     } catch (Exception $e) {}
 }
 
+/**
+ * Un admin "scopé" (role==='admin' avec une zone définie) ne doit voir/modifier
+ * que les agents de SA zone — jusqu'ici ce n'était qu'un filtre d'affichage
+ * côté frontend, jamais vérifié ici : changer l'id dans l'URL suffisait à
+ * lire/modifier/supprimer un agent d'une autre zone.
+ * superadmin et support ne sont volontairement pas restreints (comportement
+ * déjà existant côté frontend).
+ */
+function enforceAgentZone(array $current, ?string $agentZone): void {
+    if ($current['role'] !== 'admin' || empty($current['zone'])) return;
+    if (strcasecmp(trim($current['zone']), trim((string)$agentZone)) !== 0) {
+        respond(403, ['error' => 'Accès refusé : cet agent n\'est pas dans votre zone']);
+    }
+}
+
 function formatAgent(array $a): array {
     $a = trimIds($a);
     if (isset($a['localisation']) && is_string($a['localisation'])) {
@@ -47,11 +62,18 @@ if ($m === 'GET') {
         $stmt->execute([$id]);
         $a = $stmt->fetch();
         if (!$a) respond(404, ['error' => 'Agent non trouvé']);
+        enforceAgentZone($current, $a['zone'] ?? null);
         respond(200, formatAgent($a));
     }
     $where = []; $vals = [];
     if ($z = param('zone'))   { $where[] = 'LOWER(zone) = LOWER(?)'; $vals[] = $z; }
     if ($s = param('statut')) { $where[] = 'statut = ?'; $vals[] = $s; }
+    // Même pour la liste complète (sans ?zone= explicite) : un admin scopé ne
+    // doit recevoir que les agents de sa zone, pas uniquement un affichage
+    // filtré côté client qui laisserait passer le reste via l'API brute.
+    if ($current['role'] === 'admin' && !empty($current['zone'])) {
+        $where[] = 'LOWER(zone) = LOWER(?)'; $vals[] = $current['zone'];
+    }
     $sql  = 'SELECT * FROM agents' . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY "nomAgent" ASC';
     $stmt = $db->prepare($sql);
     $stmt->execute($vals);
@@ -61,6 +83,11 @@ if ($m === 'GET') {
 if ($m === 'POST') {
     requireRole(['superadmin', 'admin', 'support'], $current);
     $b     = body();
+    // Impose la zone de l'admin scopé : sinon un appel direct à l'API
+    // permettrait de créer un agent dans une zone qui n'est pas la sienne.
+    if ($current['role'] === 'admin' && !empty($current['zone'])) {
+        $b['zone'] = $current['zone'];
+    }
     $newId = $b['id'] ?? bin2hex(random_bytes(16));
     $db->prepare(
         'INSERT INTO agents (id,"nomAgent","nomResponsable",identifiant,numero,anydesk,
@@ -93,7 +120,17 @@ if ($m === 'POST') {
 
 if ($m === 'PUT' && $id) {
     requireRole(['superadmin', 'admin', 'support'], $current);
+    $zoneChk = $db->prepare('SELECT zone FROM agents WHERE id = ?');
+    $zoneChk->execute([$id]);
+    $zoneRow = $zoneChk->fetch();
+    if (!$zoneRow) respond(404, ['error' => 'Agent non trouvé']);
+    enforceAgentZone($current, $zoneRow['zone'] ?? null);
     $b = body(); $fields = []; $vals = [];
+    // Un admin scopé ne peut pas non plus déplacer l'agent hors de sa propre
+    // zone via une modification du champ zone.
+    if ($current['role'] === 'admin' && !empty($current['zone']) && array_key_exists('zone', $b)) {
+        $b['zone'] = $current['zone'];
+    }
     $strMap = [
         'nomAgent'=>'"nomAgent"', 'nomResponsable'=>'"nomResponsable"',
         'identifiant'=>'identifiant', 'numero'=>'numero', 'anydesk'=>'anydesk',
@@ -127,6 +164,11 @@ if ($m === 'PATCH' && $id) {
     $statut = $b['statut'] ?? null;
     $allowed = ['Actif', 'Inactif', 'Redéployé', 'À redéployer'];
     if (!$statut || !in_array($statut, $allowed)) respond(400, ['error' => 'Statut invalide']);
+    $zoneChk = $db->prepare('SELECT zone FROM agents WHERE id = ?');
+    $zoneChk->execute([$id]);
+    $zoneRow = $zoneChk->fetch();
+    if (!$zoneRow) respond(404, ['error' => 'Agent non trouvé']);
+    enforceAgentZone($current, $zoneRow['zone'] ?? null);
     $db->prepare('UPDATE agents SET statut = ?, "updatedAt" = NOW() WHERE id = ?')->execute([$statut, $id]);
     $stmt = $db->prepare('SELECT * FROM agents WHERE id = ?');
     $stmt->execute([$id]);
@@ -137,9 +179,12 @@ if ($m === 'PATCH' && $id) {
 
 if ($m === 'DELETE' && $id) {
     requireRole(['superadmin', 'admin'], $current);
-    $before = $db->prepare('SELECT "nomAgent" FROM agents WHERE id = ?');
+    $before = $db->prepare('SELECT "nomAgent", zone FROM agents WHERE id = ?');
     $before->execute([$id]);
-    $nomAgent = $before->fetchColumn();
+    $beforeRow = $before->fetch();
+    if (!$beforeRow) respond(404, ['error' => 'Agent non trouvé']);
+    enforceAgentZone($current, $beforeRow['zone'] ?? null);
+    $nomAgent = $beforeRow['nomAgent'] ?? $beforeRow['nomagent'] ?? '';
     $db->prepare('DELETE FROM agents WHERE id = ?')->execute([$id]);
     publishEvent('agents');
     auditAgent($db, $current, 'DELETE', $id, 'Agent supprimé : ' . ($nomAgent ?: $id));

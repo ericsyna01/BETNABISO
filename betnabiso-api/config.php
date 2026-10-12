@@ -34,11 +34,14 @@ if ($isLocal) {
     define('DB_DRIVER', 'pgsql');
 } else {
     // MySQL production (VPS)
+    // Priorité à la variable d'environnement si définie (ne garde la valeur en
+    // dur que comme repli, pour ne pas casser le déploiement actuel — à migrer
+    // vers une vraie rotation du mot de passe + suppression du repli).
     define('DB_HOST', '127.0.0.1');
     define('DB_PORT', '3306');
     define('DB_NAME', 'betnabiso');
-    define('DB_USER', 'CHANGE_ME');   // TODO: identifiants MySQL de production BetNaBiso (ceux de l'ancien client ont été retirés)
-    define('DB_PASS', 'CHANGE_ME');
+    define('DB_USER', getenv('DB_USER') ?: 'CHANGE_ME');   // TODO: identifiants MySQL de production BetNaBiso (ceux de l'ancien client ont été retirés)
+    define('DB_PASS', getenv('DB_PASS') ?: 'CHANGE_ME');
     define('DB_DRIVER', 'mysql');
 }
 
@@ -117,7 +120,7 @@ function publishEvent(string $type): void {
 // Amortit les lectures répétées (plusieurs tableaux de bord ouverts en même
 // temps) sur les requêtes les plus coûteuses. Best-effort : si Redis est
 // indisponible, on retombe simplement sur une lecture base de données directe.
-define('REDIS_PASS', 'CHANGE_ME');   // TODO: mot de passe Redis BetNaBiso (celui de l'ancien client a été retiré)
+define('REDIS_PASS', getenv('REDIS_PASS') ?: 'CHANGE_ME');   // TODO: mot de passe Redis BetNaBiso (celui de l'ancien client a été retiré)
 
 function getRedis(): ?Redis {
     static $redis  = null;
@@ -261,9 +264,20 @@ function recordFailedLogin(PDO $db, string $ip, string $username): void {
            ->execute([$attempts, $ip, $username]);
     }
     if ($attempts >= 5) {
-        // Désactiver le compte — réactivation par superadmin requise
-        $db->prepare("UPDATE users SET actif = 0 WHERE username = ?")->execute([$username]);
+        // Blocage temporaire de CE couple (ip, username) — jamais une
+        // désactivation du compte : n'importe qui connaissant juste un nom
+        // d'utilisateur valide pourrait sinon désactiver ce compte à distance
+        // (y compris un admin/superadmin) en enchaînant 5 mots de passe faux,
+        // sans jamais être authentifié.
+        $db->prepare('UPDATE login_attempts SET blocked_until = ' . (DB_DRIVER === 'pgsql' ? "NOW() + INTERVAL '15 minutes'" : 'DATE_ADD(NOW(), INTERVAL 15 MINUTE)') . ' WHERE ip = ? AND username = ?')
+           ->execute([$ip, $username]);
     }
+}
+
+/** true si ce couple (ip, username) est actuellement sous blocage temporaire. */
+function isLoginBlocked(PDO $db, string $ip, string $username): bool {
+    $row = getLoginAttempts($db, $ip, $username);
+    return !empty($row['blocked_until']) && strtotime($row['blocked_until']) > time();
 }
 
 function clearLoginAttempts(PDO $db, string $ip, string $username): void {

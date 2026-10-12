@@ -56,13 +56,16 @@ if ($m === 'GET') {
 if ($m === 'POST') {
     $b     = body();
     $newId = $b['id'] ?? bin2hex(random_bytes(16));
+    // L'auteur vient toujours de la session authentifiée, jamais du corps de la
+    // requête : sinon n'importe quel utilisateur pourrait se faire passer pour
+    // un autre (ou pour un rôle qu'il n'a pas) comme émetteur de la notification.
     $db->prepare(
         'INSERT INTO notifications (id,type,"agentId","agentNom","interventionId","requestedById","requestedByNom","requestedByRole",message,statut)
          VALUES (?,?,?,?,?,?,?,?,?,?)'
     )->execute([
         $newId, $b['type'], $b['agentId'] ?? null, $b['agentNom'] ?? null,
         $b['interventionId'] ?? null,
-        $b['requestedById'] ?? null, $b['requestedByNom'] ?? null, $b['requestedByRole'] ?? null,
+        trim($current['user_id']), $current['prenom'] . ' ' . $current['nom'], $current['role'],
         $b['message'] ?? null, 'non_lue',
     ]);
     $stmt = $db->prepare('SELECT * FROM notifications WHERE id = ?');

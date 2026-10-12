@@ -5,6 +5,29 @@ $m       = method();
 $b       = body();
 $action  = param('action');
 
+/**
+ * Anti-SSRF : ce proxy IMAP connecte le serveur à un hôte/port choisis par le
+ * client (chaque utilisateur configure sa propre boîte mail), donc on ne peut
+ * pas se limiter à une liste blanche de providers. On bloque en revanche toute
+ * résolution vers une IP privée/loopback/lien-local, qui ne peut correspondre à
+ * aucune vraie boîte mail externe et servirait uniquement à faire dialoguer le
+ * serveur avec son propre réseau interne (Redis, autres VPS, métadonnées cloud…).
+ */
+function assertNotInternalHost(string $host): void {
+    $ips = [];
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        $ips = [$host];
+    } else {
+        $ips = array_filter([gethostbyname($host)], fn($ip) => $ip !== $host);
+    }
+    if (!$ips) throw new \RuntimeException('Hôte introuvable');
+    foreach ($ips as $ip) {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            throw new \RuntimeException('Connexion à une adresse interne refusée');
+        }
+    }
+}
+
 /* ══════════════════════════════════════════════════════════════
    Client IMAP léger via stream_socket_client (SSL/TLS natif)
    ══════════════════════════════════════════════════════════════ */
@@ -13,10 +36,11 @@ class ImapClient {
     private int $seq = 0;
 
     public function __construct(string $host, int $port, bool $ssl) {
+        assertNotInternalHost($host);
         $ctx  = stream_context_create(['ssl' => [
-            'verify_peer'      => false,
-            'verify_peer_name' => false,
-            'allow_self_signed'=> true,
+            'verify_peer'      => true,
+            'verify_peer_name' => true,
+            'allow_self_signed'=> false,
         ]]);
         $addr = ($ssl ? 'ssl' : 'tcp') . "://$host:$port";
         $this->sock = @stream_socket_client($addr, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $ctx);
@@ -61,7 +85,11 @@ class ImapClient {
     }
 
     public function login(string $user, string $pass): void {
-        $pass = str_replace(['\\', '"'], ['\\\\', '\\"'], $pass);
+        // Les deux champs finissent entre guillemets dans une commande IMAP en
+        // clair terminée par \r\n : un retour chariot/saut de ligne non filtré
+        // permettrait d'injecter une commande IMAP supplémentaire.
+        $user = str_replace(["\r", "\n", '\\', '"'], ['', '', '\\\\', '\\"'], $user);
+        $pass = str_replace(["\r", "\n", '\\', '"'], ['', '', '\\\\', '\\"'], $pass);
         $resp = $this->cmd("LOGIN \"$user\" \"$pass\"");
         if (!preg_match('/T\d+ OK/i', $resp)) {
             // Extraire le message d'erreur du serveur
@@ -298,11 +326,18 @@ if ($m === 'POST' && $action === 'read') {
 
 if ($m === 'POST' && $action === 'send') {
     $s       = $b['settings'] ?? [];
-    $to      = $b['to']      ?? '';
-    $subject = $b['subject'] ?? '';
-    $body2   = $b['body']    ?? '';
+    // Un retour chariot/saut de ligne dans To/Subject/From permettrait d'ajouter
+    // des en-têtes arbitraires (Bcc, Cc…) et de détourner le serveur mail du
+    // compte en relais de spam — on les retire plutôt que de simplement les
+    // encoder, aucun de ces champs n'a besoin d'être multi-lignes.
+    $strip   = fn($v) => str_replace(["\r", "\n"], '', (string)$v);
+    $to      = $strip($b['to']      ?? '');
+    $subject = $strip($b['subject'] ?? '');
+    $from    = $strip($s['username'] ?? '');
+    $body2   = $b['body'] ?? '';
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) respond(400, ['error' => 'Destinataire invalide']);
     $headers = implode("\r\n", [
-        "From: {$s['username']}",
+        "From: $from",
         "To: $to",
         "Subject: $subject",
         "MIME-Version: 1.0",

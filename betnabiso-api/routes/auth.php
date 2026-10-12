@@ -54,6 +54,10 @@ if ($m === 'POST') {
     $ip  = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $db  = getDB();
 
+    if (isLoginBlocked($db, $ip, $username)) {
+        respond(429, ['error' => 'Trop de tentatives incorrectes. Réessayez dans quelques minutes.']);
+    }
+
     $stmt = $db->prepare('SELECT * FROM users WHERE username = ? LIMIT 1');
     $stmt->execute([$username]);
     $u = $stmt->fetch();
