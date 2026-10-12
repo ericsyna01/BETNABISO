@@ -497,7 +497,11 @@ export class PlanningComponent {
 
   creneaux    = computed(() => this.creneauSvc.getAll());
   currentUser = this.auth.currentUser;
-  isSuperadmin = computed(() => this.auth.role() === 'superadmin');
+  // Délègue à AuthService.isAdmin() (admin + superadmin, multi-rôles via
+  // roles[]) plutôt que de réimplémenter sa propre vérification sur le champ
+  // singulier role() — sinon un compte avec roles=['admin','superadmin'] mais
+  // un role primaire différent basculait à tort vers la vue restreinte.
+  isSuperadmin = computed(() => this.auth.isAdmin());
 
   private today = new Date();
   currentWeek = signal(getISOWeek(this.today));
@@ -644,8 +648,16 @@ export class PlanningComponent {
   async saveEntry() {
     if (!this.formUserId || !this.formType) return;
     this.saving.set(true);
-    await this.assignUser(this.formUserId, this.formDate(), this.formType, this.formNote || undefined);
-    this.saving.set(false); this.closeForm();
+    try {
+      await this.assignUser(this.formUserId, this.formDate(), this.formType, this.formNote || undefined);
+      this.closeForm();
+    } catch {
+      // Sans ce catch, une erreur réseau laissait "saving" à true pour
+      // toujours : le bouton Confirmer restait désactivé sans recharger.
+      this.snack.open('Erreur lors de l\'affectation, réessayez', 'OK', { duration: 3500, panelClass: 'error-snack' });
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   /** Affecte un utilisateur à un jour donné, avec confirmation en cas de conflit. Partagé par le formulaire et le glisser-déposer. */
@@ -685,19 +697,31 @@ export class PlanningComponent {
     if (type === entry.type) return;
     const creneau = this.creneauSvc.getByLabel(type);
     if (!creneau) return;
-    await this.planningSvc.update(entry.id, { type, heureDebut: creneau.heureDebut, heureFin: creneau.heureFin });
-    this.snack.open(`Créneau changé : ${creneau.label}`, 'OK', { duration: 2000, panelClass: 'success-snack' });
+    try {
+      await this.planningSvc.update(entry.id, { type, heureDebut: creneau.heureDebut, heureFin: creneau.heureFin });
+      this.snack.open(`Créneau changé : ${creneau.label}`, 'OK', { duration: 2000, panelClass: 'success-snack' });
+    } catch {
+      this.snack.open('Erreur lors du changement de créneau', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async deleteEntry(entry: PlanningEntry) {
-    await this.planningSvc.delete(entry.id);
-    this.snack.open('Affectation supprimée', 'OK', { duration: 1500 });
+    try {
+      await this.planningSvc.delete(entry.id);
+      this.snack.open('Affectation supprimée', 'OK', { duration: 1500 });
+    } catch {
+      this.snack.open('Erreur lors de la suppression', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async clearWeek() {
     if (!await this.confirmSvc.danger(`Supprimer toutes les affectations de la semaine ${this.currentWeek()} ?`, 'Vider la semaine')) return;
-    await this.planningSvc.deleteByWeek(this.currentYear(), this.currentWeek());
-    this.snack.open('Semaine vidée', 'OK', { duration: 2000 });
+    try {
+      await this.planningSvc.deleteByWeek(this.currentYear(), this.currentWeek());
+      this.snack.open('Semaine vidée', 'OK', { duration: 2000 });
+    } catch {
+      this.snack.open('Erreur lors de la suppression de la semaine', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async generateRotation() {
@@ -705,22 +729,26 @@ export class PlanningComponent {
     const creneau = this.creneaux()[0];
     if (!users.length) { this.snack.open('Aucun technicien ou support actif', 'OK', { duration: 2500 }); return; }
     if (!creneau) { this.snack.open('Aucun créneau paramétré — créez-en un dans Administration > Créneaux', 'OK', { duration: 3500 }); return; }
-    await this.planningSvc.deleteByWeek(this.currentYear(), this.currentWeek());
-    const workDays = getWeekDates(this.currentYear(), this.currentWeek()).slice(0, 5);
-    const offset   = (this.currentWeek() - 1) % users.length;
-    const rotated  = [...users.slice(offset), ...users.slice(0, offset)];
-    let idx = 0;
-    for (const day of workDays) {
-      const user = rotated[idx % rotated.length];
-      await this.planningSvc.create({
-        userId: user.id, userNom: `${user.prenom} ${user.nom}`, userRole: user.role,
-        date: formatDate(day), type: creneau.label,
-        heureDebut: creneau.heureDebut, heureFin: creneau.heureFin,
-      });
-      idx++;
+    try {
+      await this.planningSvc.deleteByWeek(this.currentYear(), this.currentWeek());
+      const workDays = getWeekDates(this.currentYear(), this.currentWeek()).slice(0, 5);
+      const offset   = (this.currentWeek() - 1) % users.length;
+      const rotated  = [...users.slice(offset), ...users.slice(0, offset)];
+      let idx = 0;
+      for (const day of workDays) {
+        const user = rotated[idx % rotated.length];
+        await this.planningSvc.create({
+          userId: user.id, userNom: `${user.prenom} ${user.nom}`, userRole: user.role,
+          date: formatDate(day), type: creneau.label,
+          heureDebut: creneau.heureDebut, heureFin: creneau.heureFin,
+        });
+        idx++;
+      }
+      this.snack.open(`Rotation générée : ${Math.min(users.length, 5)} affectations`, 'OK',
+        { duration: 3000, panelClass: 'success-snack' });
+    } catch {
+      this.snack.open('Erreur lors de la génération de la rotation', 'OK', { duration: 3000, panelClass: 'error-snack' });
     }
-    this.snack.open(`Rotation générée : ${Math.min(users.length, 5)} affectations`, 'OK',
-      { duration: 3000, panelClass: 'success-snack' });
   }
 }
 

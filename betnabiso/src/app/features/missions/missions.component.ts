@@ -1166,7 +1166,11 @@ export class MissionsComponent implements OnInit {
   /* ── Actions ──────────────────────────────────────────────────────────── */
   async updateStatut(m: Mission, statut: MissionStatut): Promise<void> {
     const result = await this.missionSvc.updateStatut(m.id, statut);
-    if (result) this.snack.open(`Mission : ${this.statutLabel(statut)}`, 'OK', { duration: 2000, panelClass: 'success-snack' });
+    if (result) {
+      this.snack.open(`Mission : ${this.statutLabel(statut)}`, 'OK', { duration: 2000, panelClass: 'success-snack' });
+    } else {
+      this.snack.open('Erreur lors de la mise à jour', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async refuser(m: Mission): Promise<void> {
@@ -1178,8 +1182,12 @@ export class MissionsComponent implements OnInit {
     });
     const motif: string | undefined = await firstValueFrom(ref.afterClosed());
     if (motif === undefined) return;
-    await this.missionSvc.updateStatut(m.id, 'refusée', motif || undefined);
-    this.snack.open('Mission refusée', 'OK', { duration: 2000, panelClass: 'warn-snack' });
+    const result = await this.missionSvc.updateStatut(m.id, 'refusée', motif || undefined);
+    if (result) {
+      this.snack.open('Mission refusée', 'OK', { duration: 2000, panelClass: 'warn-snack' });
+    } else {
+      this.snack.open('Erreur lors du refus', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async terminer(m: Mission): Promise<void> {
@@ -1192,12 +1200,20 @@ export class MissionsComponent implements OnInit {
     const notes: string | undefined = await firstValueFrom(ref.afterClosed());
     if (notes === undefined) return;
     const result = await this.missionSvc.updateStatut(m.id, 'terminée', notes || undefined);
-    if (result) this.snack.open('Mission terminée ✓', 'OK', { duration: 2000, panelClass: 'success-snack' });
+    if (result) {
+      this.snack.open('Mission terminée ✓', 'OK', { duration: 2000, panelClass: 'success-snack' });
+    } else {
+      this.snack.open('Erreur lors de la clôture', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 
   async deleteMission(m: Mission): Promise<void> {
     if (!await this.confirmSvc.danger(`Supprimer la mission "${m.titre}" ?`)) return;
-    await this.missionSvc.delete(m.id);
-    this.snack.open('Mission supprimée', 'OK', { duration: 2000 });
+    const ok = await this.missionSvc.delete(m.id);
+    if (ok) {
+      this.snack.open('Mission supprimée', 'OK', { duration: 2000 });
+    } else {
+      this.snack.open('Erreur lors de la suppression', 'OK', { duration: 3000, panelClass: 'error-snack' });
+    }
   }
 }

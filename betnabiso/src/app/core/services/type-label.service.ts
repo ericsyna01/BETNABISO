@@ -60,11 +60,7 @@ export class TypeLabelService {
       const updated = await firstValueFrom(this.http.put<TypeLabel>(`${API}/${id}`, data));
       this.saveLocal(this._data().map(t => t.id === id ? updated : t));
       return updated;
-    } catch {
-      const all = this._data().map(t => t.id === id ? { ...t, ...data } : t);
-      this.saveLocal(all);
-      return all.find(t => t.id === id) ?? null;
-    }
+    } catch { return null; }
   }
 
   async delete(id: string): Promise<void> {

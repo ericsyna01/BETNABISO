@@ -850,13 +850,17 @@ export class AgentListComponent implements OnInit, OnDestroy {
       });
       ref.afterClosed().subscribe(async (target: Agent | null) => {
         if (!target) return;
-        await this.agentSvc.update(agent.id, {
-          statut: 'Redéployé',
-          redeploieVersId: target.id,
-          redeploieVersNom: target.nomAgent,
-          date: new Date().toISOString().split('T')[0]
-        });
-        this.snack.open(`${agent.nomAgent} redéployé vers ${target.nomAgent}`, 'OK', { duration: 3000, panelClass: 'success-snack' });
+        try {
+          await this.agentSvc.update(agent.id, {
+            statut: 'Redéployé',
+            redeploieVersId: target.id,
+            redeploieVersNom: target.nomAgent,
+            date: new Date().toISOString().split('T')[0]
+          });
+          this.snack.open(`${agent.nomAgent} redéployé vers ${target.nomAgent}`, 'OK', { duration: 3000, panelClass: 'success-snack' });
+        } catch {
+          this.snack.open('Erreur lors du redéploiement', 'OK', { duration: 3000, panelClass: 'error-snack' });
+        }
       });
     } else {
       this.agentSvc.update(agent.id, {
@@ -864,15 +868,21 @@ export class AgentListComponent implements OnInit, OnDestroy {
         redeploieVersId: undefined,
         redeploieVersNom: undefined,
         date: new Date().toISOString().split('T')[0]
+      }).then(() => {
+        this.snack.open(`Statut de ${agent.nomAgent} : ${statut}`, 'OK', { duration: 2500, panelClass: 'success-snack' });
+      }).catch(() => {
+        this.snack.open('Erreur lors du changement de statut', 'OK', { duration: 3000, panelClass: 'error-snack' });
       });
-      this.snack.open(`Statut de ${agent.nomAgent} : ${statut}`, 'OK', { duration: 2500, panelClass: 'success-snack' });
     }
   }
 
   async deleteAgent(agent: Agent): Promise<void> {
-    if (await this.confirmSvc.danger(`Supprimer définitivement l'agent ${agent.nomAgent} ?`)) {
-      await this.agentSvc.delete(agent.id);
+    if (!await this.confirmSvc.danger(`Supprimer définitivement l'agent ${agent.nomAgent} ?`)) return;
+    const ok = await this.agentSvc.delete(agent.id);
+    if (ok) {
       this.snack.open('Agent supprimé', 'OK', { duration: 2000, panelClass: 'success-snack' });
+    } else {
+      this.snack.open('Erreur lors de la suppression', 'OK', { duration: 3000, panelClass: 'error-snack' });
     }
   }
 

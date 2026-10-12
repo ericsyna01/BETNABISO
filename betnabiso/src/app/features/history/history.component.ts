@@ -644,7 +644,7 @@ type Period = 'month' | 'trimestre' | 'all';
               <mat-card-header>
                 <mat-card-title><mat-icon>history</mat-icon> Journal des réaffectations</mat-card-title>
                 <div class="reass-filter">
-                  <input type="text" [(ngModel)]="reassignSearch" placeholder="Filtrer par technicien ou agent…" class="reass-search-input">
+                  <input type="text" [ngModel]="reassignSearch()" (ngModelChange)="reassignSearch.set($event)" placeholder="Filtrer par technicien ou agent…" class="reass-search-input">
                 </div>
               </mat-card-header>
               <mat-card-content style="padding:0">
@@ -1407,12 +1407,12 @@ export class HistoryComponent implements OnInit {
   }
 
   // ── Réaffectations ──
-  reassignSearch = '';
+  reassignSearch = signal('');
 
   reassignments = computed(() => this.interventionSvc.getReassignments());
 
   filteredReassignments = computed(() => {
-    const q = this.reassignSearch.toLowerCase().trim();
+    const q = this.reassignSearch().toLowerCase().trim();
     if (!q) return this.reassignments();
     return this.reassignments().filter(r =>
       (r.fromTechNom ?? '').toLowerCase().includes(q) ||

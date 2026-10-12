@@ -52,11 +52,7 @@ export class CreneauService {
       const updated = await firstValueFrom(this.http.put<Creneau>(`${API}/${id}`, data));
       this.saveLocal(this._data().map(c => c.id === id ? updated : c));
       return updated;
-    } catch {
-      const all = this._data().map(c => c.id === id ? { ...c, ...data } : c);
-      this.saveLocal(all);
-      return all.find(c => c.id === id) ?? null;
-    }
+    } catch { return null; }
   }
 
   async delete(id: string): Promise<void> {

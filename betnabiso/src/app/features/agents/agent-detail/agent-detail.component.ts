@@ -713,6 +713,11 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
   statusLoading = signal(false);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private sseSub: Subscription | null = null;
+  // Id de l'agent affiché au moment où loadStatus() a été lancé : si la
+  // réponse revient après qu'on a déjà navigué vers un autre agent, on
+  // l'ignore plutôt que d'écraser le statut machine du nouvel agent avec
+  // celui de l'ancien.
+  private loadingAgentId: string | null = null;
   iCols = ['date', 'type', 'technicien', 'duree', 'statut', 'description'];
 
   sortedInterventions = computed(() =>
@@ -747,6 +752,13 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.sseSub?.unsubscribe();
 
+    // Remis à null synchroniquement (pas d'attente de loadStatus) : sinon, en
+    // naviguant d'une fiche agent à une autre, la carte "État des machines"
+    // continuait d'afficher le statut (IP, pastille en ligne…) de l'ANCIEN
+    // agent jusqu'à ce que le nouveau ping arrive — et indéfiniment si le
+    // nouvel agent n'a jamais pingé (le catch de loadStatus est silencieux).
+    this.loadingAgentId = id;
+    this.machineStatus.set(null);
     this.agent.set(this.agentSvc.getById(id));
     this.interventions.set(this.interventionSvc.getByAgent(id));
     this.loadStatus(id);
@@ -765,6 +777,7 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
   private async loadStatus(id: string): Promise<void> {
     try {
       const status = await this.heartbeatSvc.getStatus(id);
+      if (this.loadingAgentId !== id) return; // réponse obsolète (agent changé entre-temps)
       this.machineStatus.set(status);
     } catch { /* silencieux si l'agent n'a jamais envoyé de ping */ }
   }

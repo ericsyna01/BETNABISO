@@ -74,15 +74,14 @@ export class MissionService {
       );
       this.save(this._data().map(x => x.id === id ? m : x));
       return m;
-    } catch {
-      const updated = this._data().map(x => x.id === id ? { ...x, statut, notes: notes ?? x.notes } : x);
-      this.save(updated);
-      return updated.find(x => x.id === id) ?? null;
-    }
+    } catch { return null; }
   }
 
-  async delete(id: string): Promise<void> {
-    try { await firstValueFrom(this.http.delete(`${API}/${id}`)); } catch {}
-    this.save(this._data().filter(m => m.id !== id));
+  async delete(id: string): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.delete(`${API}/${id}`));
+      this.save(this._data().filter(m => m.id !== id));
+      return true;
+    } catch { return false; }
   }
 }

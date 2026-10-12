@@ -91,16 +91,14 @@ export class AgentService {
     return agent;
   }
 
+  // Ne rattrape plus l'échec réseau pour fabriquer un faux succès local : la
+  // modification semblait alors enregistrée, puis disparaissait sans prévenir
+  // au resync suivant (le serveur renvoyant la vraie donnée, inchangée). Les
+  // appelants ont déjà un try/catch pour ce cas — on les laisse le gérer.
   async update(id: string, data: Partial<Agent>): Promise<Agent | null> {
-    try {
-      const updated = await firstValueFrom(this.http.put<Agent>(`${API}/${id}`, data));
-      this.saveLocal(this._data().map(a => a.id === id ? updated : a));
-      return updated;
-    } catch {
-      const agents = this._data().map(a => a.id === id ? { ...a, ...data } : a);
-      this.saveLocal(agents);
-      return agents.find(a => a.id === id) ?? null;
-    }
+    const updated = await firstValueFrom(this.http.put<Agent>(`${API}/${id}`, data));
+    this.saveLocal(this._data().map(a => a.id === id ? updated : a));
+    return updated;
   }
 
   async updateStatut(id: string, statut: AgentStatut): Promise<void> {

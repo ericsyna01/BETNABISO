@@ -876,27 +876,33 @@ export class ChatPanelComponent implements OnDestroy, AfterViewChecked {
     this.sending = true;
     this.newMessage = '';
 
-    const attachment = hasAttachment ? await this.uploadFile() : null;
-    this.clearAttachment();
+    try {
+      const attachment = hasAttachment ? await this.uploadFile() : null;
+      this.clearAttachment();
 
-    if (hasAttachment && !attachment) {
-      this.snack.open('Échec de l\'envoi du fichier, réessayez', 'OK', { duration: 3500, panelClass: 'error-snack' });
+      if (hasAttachment && !attachment) {
+        this.snack.open('Échec de l\'envoi du fichier, réessayez', 'OK', { duration: 3500, panelClass: 'error-snack' });
+        this.newMessage = content;
+        return;
+      }
+
+      if (this.selectedUser()) {
+        const u = this.selectedUser()!;
+        await this.chatSvc.send(u.id, `${u.prenom} ${u.nom}`, content || '📎', attachment);
+      } else if (this.selectedGroup()) {
+        const g = this.selectedGroup()!;
+        await this.groupSvc.send(g.id, content || '📎', attachment);
+        this.groupSvc.markRead(g.id);
+      }
+      this.shouldScroll = true;
+    } catch {
+      // Sans ce catch, une coupure réseau laissait "sending" bloqué à true
+      // pour toujours : plus aucun message ne pouvait être envoyé sans recharger.
+      this.snack.open('Erreur réseau — message non envoyé, réessayez', 'OK', { duration: 3500, panelClass: 'error-snack' });
       this.newMessage = content;
+    } finally {
       this.sending = false;
-      return;
     }
-
-    if (this.selectedUser()) {
-      const u = this.selectedUser()!;
-      await this.chatSvc.send(u.id, `${u.prenom} ${u.nom}`, content || '📎', attachment);
-    } else if (this.selectedGroup()) {
-      const g = this.selectedGroup()!;
-      await this.groupSvc.send(g.id, content || '📎', attachment);
-      this.groupSvc.markRead(g.id);
-    }
-
-    this.sending = false;
-    this.shouldScroll = true;
   }
 
   initials(u: User): string {

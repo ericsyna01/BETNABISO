@@ -47,15 +47,9 @@ export class PlanningService {
   }
 
   async create(data: Omit<PlanningEntry, 'id' | 'createdAt'>): Promise<PlanningEntry> {
-    try {
-      const entry = await firstValueFrom(this.http.post<PlanningEntry>(API, data));
-      this.saveLocal([...this._data(), entry]);
-      return entry;
-    } catch {
-      const entry: PlanningEntry = { ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-      this.saveLocal([...this._data(), entry]);
-      return entry;
-    }
+    const entry = await firstValueFrom(this.http.post<PlanningEntry>(API, data));
+    this.saveLocal([...this._data(), entry]);
+    return entry;
   }
 
   async update(id: string, data: Partial<PlanningEntry>): Promise<PlanningEntry | null> {
@@ -63,11 +57,7 @@ export class PlanningService {
       const updated = await firstValueFrom(this.http.put<PlanningEntry>(`${API}/${id}`, data));
       this.saveLocal(this._data().map(e => e.id === id ? updated : e));
       return updated;
-    } catch {
-      const all = this._data().map(e => e.id === id ? { ...e, ...data } : e);
-      this.saveLocal(all);
-      return all.find(e => e.id === id) ?? null;
-    }
+    } catch { return null; }
   }
 
   async delete(id: string): Promise<void> {

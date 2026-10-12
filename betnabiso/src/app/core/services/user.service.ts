@@ -50,11 +50,7 @@ export class UserService {
       const updated = await firstValueFrom(this.http.put<User>(`${API}/${id}`, data));
       this.saveLocal(this._data().map(u => u.id === id ? updated : u));
       return updated;
-    } catch {
-      const users = this._data().map(u => u.id === id ? { ...u, ...data } : u);
-      this.saveLocal(users);
-      return users.find(u => u.id === id) ?? null;
-    }
+    } catch { return null; }
   }
 
   async delete(id: string): Promise<boolean> {
