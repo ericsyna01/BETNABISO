@@ -93,6 +93,7 @@ if ($m === 'PATCH') {
         $db->prepare("UPDATE notifications SET statut = 'traitée' WHERE id = ?")->execute([$id]);
         $stmt = $db->prepare('SELECT * FROM notifications WHERE id = ?');
         $stmt->execute([$id]);
+        publishEvent('notifications');
         respond(200, formatNotif($stmt->fetch()));
     }
 }

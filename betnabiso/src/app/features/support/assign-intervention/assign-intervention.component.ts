@@ -697,8 +697,20 @@ export class AssignInterventionComponent implements OnInit {
         this.snack.open('Intervention affectée avec succès', 'OK', { duration: 2500, panelClass: 'success-snack' });
       }
       this.router.navigate(['/support']);
-    } catch (err) {
-      this.snack.open("Erreur lors de l'affectation", 'OK', { duration: 3000, panelClass: 'error-snack' });
+    } catch (err: any) {
+      if (err?.status === 409 && this.prefillNotifId) {
+        // Un autre membre du support a déjà assigné ce signalement entre-temps :
+        // on rafraîchit pour faire disparaître l'entrée obsolète plutôt que de
+        // laisser l'utilisateur retenter et créer un doublon.
+        this.snack.open(
+          err?.error?.error ?? 'Ce signalement a déjà été pris en charge par un autre membre du support',
+          'OK', { duration: 4500, panelClass: 'warn-snack' }
+        );
+        await this.notifSvc.loadFromApi();
+        this.router.navigate(['/support']);
+      } else {
+        this.snack.open("Erreur lors de l'affectation", 'OK', { duration: 3000, panelClass: 'error-snack' });
+      }
     } finally {
       this.saving.set(false);
     }

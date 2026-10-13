@@ -234,6 +234,21 @@ if ($m === 'POST') {
     }
     if (!$agentRow) respond(404, ['error' => 'Agent introuvable']);
     enforceInterventionZone($current, $agentRow['zone'] ?? null);
+    // Verrou atomique anti double-affectation : si cette intervention vient d'un
+    // signalement QR, on ne la crée que si on arrive à faire basculer la
+    // notification de "non traitée" à "traitée" nous-mêmes. Si un autre membre
+    // du support a déjà cliqué "assigner" sur le même signalement entre-temps,
+    // 0 ligne est affectée ici et on refuse plutôt que de créer un doublon.
+    if (!empty($b['signalementNotifId'])) {
+        $claim = $db->prepare("UPDATE notifications SET statut = 'traitée' WHERE id = ? AND statut != 'traitée'");
+        $claim->execute([$b['signalementNotifId']]);
+        if ($claim->rowCount() === 0) {
+            respond(409, ['error' => 'Ce signalement a déjà été pris en charge par un autre membre du support']);
+        }
+        // Prévenir tout de suite les autres sessions support/admin que ce
+        // signalement vient d'être pris, avant même la fin de la création.
+        publishEvent('notifications');
+    }
     $newId   = $b['id'] ?? bin2hex(random_bytes(16));
     $techId  = ($current['role'] === 'technicien') ? $current['user_id'] : ($b['technicienId'] ?? null);
     $techNom = ($current['role'] === 'technicien') ? ($current['prenom'] . ' ' . $current['nom']) : ($b['technicienNom'] ?? null);

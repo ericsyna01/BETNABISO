@@ -8,6 +8,7 @@ import { PresenceService } from '../../core/services/presence.service';
 import { LayoutService } from '../../core/services/layout.service';
 import { MissionService } from '../../core/services/mission.service';
 import { InterventionService } from '../../core/services/intervention.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 interface NavItem {
   label: string;
@@ -54,7 +55,7 @@ interface NavEntry extends NavItem {
               <span class="nav-badge warn">{{ interventionCount() }}</span>
             }
             @if ((item.route === '/interventions' || item.route === '/support') && signalementCount() > 0) {
-              <mat-icon class="nav-badge-icon" matTooltip="Intervention(s) issue(s) d'un signalement en attente">qr_code_2</mat-icon>
+              <mat-icon class="nav-badge-icon" matTooltip="Signalement(s) QR en attente (non affecté ou non pris en charge)">qr_code_2</mat-icon>
             }
           </a>
         }
@@ -344,6 +345,7 @@ export class SidebarComponent {
   auth                    = inject(AuthService);
   private missionSvc      = inject(MissionService);
   private interventionSvc = inject(InterventionService);
+  private notifSvc        = inject(NotificationService);
   presenceSvc             = inject(PresenceService);
   layoutSvc               = inject(LayoutService);
   user = this.auth.currentUser;
@@ -358,7 +360,16 @@ export class SidebarComponent {
     return all.filter(i => i.statut === 'Assignée').length;
   });
 
-  signalementCount = computed(() => this.interventionSvc.getSignalementPending().length);
+  signalementCount = computed(() => {
+    const pendingInterventions = this.interventionSvc.getSignalementPending().length;
+    // Support/admin doivent aussi voir les signalements pas encore convertis
+    // en intervention (encore au stade "notification", pas affectés à un technicien).
+    const user = this.auth.currentUser();
+    if (!user || this.auth.isTechnicien()) return pendingInterventions;
+    const pendingNotifs = this.notifSvc.getAll()
+      .filter(n => n.type === 'signalement_panne' && n.statut !== 'traitée').length;
+    return pendingInterventions + pendingNotifs;
+  });
 
   missionCount = computed(() => {
     const user = this.auth.currentUser();
