@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { AgentService } from '../../../core/services/agent.service';
 import { InterventionService } from '../../../core/services/intervention.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -216,7 +217,7 @@ export class AgentQrDialogComponent implements OnInit {
   imports: [
     RouterLink, DatePipe, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTabsModule, MatDividerModule, MatSnackBarModule, MatTableModule, MatTooltipModule,
-    MatDialogModule, MatFormFieldModule, MatInputModule
+    MatDialogModule, MatFormFieldModule, MatInputModule, MatPaginatorModule
   ],
   template: `
     <div class="page-container">
@@ -502,7 +503,7 @@ export class AgentQrDialogComponent implements OnInit {
                 </div>
 
                 <div class="table-container">
-                  <table mat-table [dataSource]="sortedInterventions()">
+                  <table mat-table [dataSource]="pagedInterventions()">
                     <ng-container matColumnDef="date">
                       <th mat-header-cell *matHeaderCellDef>Date</th>
                       <td mat-cell *matCellDef="let i">{{ i.dateDebut | date:'dd/MM/yyyy HH:mm' }}</td>
@@ -535,7 +536,7 @@ export class AgentQrDialogComponent implements OnInit {
 
                   <!-- Cartes (mobile) -->
                   <div class="interv-cards">
-                    @for (i of sortedInterventions(); track i.id) {
+                    @for (i of pagedInterventions(); track i.id) {
                       <div class="iv-card">
                         <div class="iv-top">
                           <span class="iv-date">{{ i.dateDebut | date:'dd/MM/yy HH:mm' }}</span>
@@ -552,6 +553,15 @@ export class AgentQrDialogComponent implements OnInit {
                       </div>
                     }
                   </div>
+
+                  <mat-paginator
+                    [length]="sortedInterventions().length"
+                    [pageSize]="pageSize()"
+                    [pageIndex]="pageIndex()"
+                    [pageSizeOptions]="[10, 25, 50]"
+                    (page)="onPage($event)"
+                    showFirstLastButtons>
+                  </mat-paginator>
                 </div>
               }
             </div>
@@ -724,6 +734,21 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
     [...this.interventions()].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
   );
 
+  pageSize  = signal(10);
+  pageIndex = signal(0);
+
+  pagedInterventions = computed(() => {
+    const all   = this.sortedInterventions();
+    const size  = this.pageSize();
+    const start = this.pageIndex() * size;
+    return start >= all.length ? all.slice(0, size) : all.slice(start, start + size);
+  });
+
+  onPage(e: PageEvent): void {
+    this.pageSize.set(e.pageSize);
+    this.pageIndex.set(e.pageIndex);
+  }
+
   iStats = computed(() => {
     const list = this.interventions();
     const terminees = list.filter(i => i.statut === 'Terminée').length;
@@ -761,6 +786,7 @@ export class AgentDetailComponent implements OnInit, OnDestroy {
     this.machineStatus.set(null);
     this.agent.set(this.agentSvc.getById(id));
     this.interventions.set(this.interventionSvc.getByAgent(id));
+    this.pageIndex.set(0);
     this.loadStatus(id);
     this.pollTimer = setInterval(() => this.loadStatus(id), 60_000);
     this.sseSub = this.sseSvc.dataUpdate$.subscribe(type => {
