@@ -311,6 +311,10 @@ export class DeplacementDialogComponent {
                   <img [src]="i.pieceJointe" class="attach-thumb-sm" (click)="openAttachment(i.pieceJointe)"
                        matTooltip="Photo jointe par l'agent" alt="Photo">
                 }
+                @if (i.audioMessage) {
+                  <mat-icon class="audio-icon" matTooltip="Message vocal de l'agent — cliquer pour écouter"
+                            (click)="openAttachment(i.audioMessage)">mic</mat-icon>
+                }
               </div>
             </td>
           </ng-container>
@@ -527,6 +531,11 @@ export class DeplacementDialogComponent {
               @if (i.pieceJointe) {
                 <img [src]="i.pieceJointe" class="attach-thumb-mobile" (click)="openAttachment(i.pieceJointe)" alt="Photo jointe par l'agent">
               }
+              @if (i.audioMessage) {
+                <button type="button" class="audio-btn-mobile" (click)="openAttachment(i.audioMessage)">
+                  <mat-icon>mic</mat-icon> Écouter le message vocal
+                </button>
+              }
               @if (!auth.isTechnicien()) {
                 <div class="ic-line"><span class="ic-label">Technicien</span> {{ i.technicienNom }}</div>
               }
@@ -703,6 +712,18 @@ export class DeplacementDialogComponent {
     .signalement-icon { font-size: 15px !important; width: 15px !important; height: 15px !important; color: #e65100 !important; }
     .attach-thumb-sm { width: 26px; height: 26px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1px solid #e2e8f0; }
     .attach-thumb-mobile { width: 100%; max-height: 130px; object-fit: cover; border-radius: 8px; cursor: pointer; margin-top: 4px; }
+    .audio-icon {
+      font-size: 18px !important; width: 18px !important; height: 18px !important;
+      color: #1565c0 !important; cursor: pointer; flex-shrink: 0;
+      &:hover { color: #0d47a1 !important; }
+    }
+    .audio-btn-mobile {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; margin-top: 6px; padding: 8px 10px;
+      border: 1px solid #bbdefb; border-radius: 8px; background: #e3f2fd;
+      color: #1565c0; font-size: 12.5px; font-weight: 600; cursor: pointer;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
     .desc-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
     .result-count { color: var(--text-secondary); font-size: 13px; margin-left: auto; white-space: nowrap; }
 

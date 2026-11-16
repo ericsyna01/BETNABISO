@@ -24,6 +24,8 @@ export interface Intervention {
   statut: InterventionStatut;
   observations?: string;
   pieceJointe?: string;
+  /* Message vocal joint au signalement d'origine (voir self-service.php) */
+  audioMessage?: string;
   deplacementRequis?: boolean;
   deplacementNote?: string;
   deplacementRequestedBy?: string;

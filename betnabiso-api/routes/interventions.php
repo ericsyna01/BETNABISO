@@ -21,6 +21,19 @@ try {
     }
 } catch (Throwable $e) {}
 
+// Migration défensive : message vocal joint au signalement d'origine (self-service.php),
+// pour que le technicien assigné puisse l'écouter lui aussi (avant, seuls support/admin
+// y avaient accès via la notification d'origine — jamais transmis à l'intervention créée).
+try {
+    if (DB_DRIVER === 'pgsql') {
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "audioMessage" VARCHAR(255)');
+    } else {
+        if (!$db->query("SHOW COLUMNS FROM interventions LIKE 'audioMessage'")->fetch()) {
+            $db->exec('ALTER TABLE interventions ADD COLUMN audioMessage VARCHAR(255)');
+        }
+    }
+} catch (Throwable $e) {}
+
 function auditLog(PDO $db, array $current, string $act, string $resId, string $details = ''): void {
     try {
         $db->prepare(
@@ -71,7 +84,7 @@ function formatInterv(array $i): array {
         'chauffeurid'=>'chauffeurId','chauffeurnom'=>'chauffeurNom',
         'updatedat'=>'updatedAt','piecejointe'=>'pieceJointe',
         'datepplanifiee'=>'datePlanifiee',
-        'viasignalement'=>'viaSignalement','signalementnotifid'=>'signalementNotifId',
+        'viasignalement'=>'viaSignalement','signalementnotifid'=>'signalementNotifId','audiomessage'=>'audioMessage',
     ];
     // Ajout dynamique de la clé lowercase pour deplacementTermine (MySQL retourne tout en minuscules)
     $camel[strtolower('deplacementTermine')] = 'deplacementTermine';
@@ -90,7 +103,7 @@ function formatInterv(array $i): array {
               'duree','observations','pieceJointe','deplacementNote',
               'deplacementRequestedBy','deplacementRequestedAt',
               'deplacementValideBy','deplacementValideAt',
-              'deplacementRefuseBy','chauffeurId','chauffeurNom','signalementNotifId'] as $f) {
+              'deplacementRefuseBy','chauffeurId','chauffeurNom','signalementNotifId','audioMessage'] as $f) {
         if (isset($out[$f]) && $out[$f] === '') $out[$f] = null;
     }
     if (isset($out['duree'])) $out['duree'] = $out['duree'] ? (int)$out['duree'] : null;
@@ -255,8 +268,8 @@ if ($m === 'POST') {
     $db->prepare(
         'INSERT INTO interventions (id,"agentId","agentNom","agentZone","technicienId","technicienNom",
          "assignedById","assignedByNom","assignedAt",priorite,"datePlanifiee",type,"dateDebut",
-         description,statut,observations,"pieceJointe","viaSignalement","signalementNotifId","updatedAt")
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
+         description,statut,observations,"pieceJointe","audioMessage","viaSignalement","signalementNotifId","updatedAt")
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
     )->execute([
         $newId,
         $b['agentId'], $b['agentNom'], $agentRow['zone'] ?? ($b['agentZone'] ?? null),
@@ -274,6 +287,7 @@ if ($m === 'POST') {
         $b['statut'] ?? 'Assignée',
         $b['observations'] ?? null,
         $b['pieceJointe'] ?? null,
+        $b['audioMessage'] ?? null,
         !empty($b['viaSignalement']) ? 1 : 0,
         $b['signalementNotifId'] ?? null,
     ]);

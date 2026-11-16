@@ -510,6 +510,7 @@ export class AssignInterventionComponent implements OnInit {
   editMode = signal(false);
   private editId = signal<string | null>(null);
   private prefillPhotoUrl: string | null = null;
+  private prefillAudioUrl: string | null = null;
   private prefillNotifId: string | null = null;
   selectedAgent = signal<Agent | undefined>(undefined);
 
@@ -564,6 +565,7 @@ export class AssignInterventionComponent implements OnInit {
     const prefillDescription = qp.get('description');
     const prefillTechnicienId = qp.get('technicienId');
     this.prefillPhotoUrl = qp.get('photoUrl');
+    this.prefillAudioUrl = qp.get('audioUrl');
     this.prefillNotifId  = qp.get('notifId');
 
     if (agentId) {
@@ -688,6 +690,7 @@ export class AssignInterventionComponent implements OnInit {
           assignedByNom: currentUser ? `${currentUser.prenom} ${currentUser.nom}` : undefined,
           assignedAt: new Date().toISOString(),
           pieceJointe: this.prefillPhotoUrl ?? undefined,
+          audioMessage: this.prefillAudioUrl ?? undefined,
           viaSignalement: !!this.prefillNotifId,
           signalementNotifId: this.prefillNotifId ?? undefined,
         });

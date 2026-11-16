@@ -41,6 +41,10 @@ const COLS: KanbanCol[] = [
                   @if (i.deplacementRequis) {
                     <mat-icon class="dep-icon" matTooltip="Déplacement">directions_car</mat-icon>
                   }
+                  @if (i.audioMessage) {
+                    <mat-icon class="audio-icon" matTooltip="Message vocal de l'agent — cliquer pour écouter"
+                              (click)="openAudio(i.audioMessage)">mic</mat-icon>
+                  }
                 </div>
                 <div class="card-agent">
                   <mat-icon>person</mat-icon>
@@ -120,6 +124,7 @@ const COLS: KanbanCol[] = [
     }
     .card-type { font-size: 11px; font-weight: 700; color: var(--primary, #1a3a5c); flex: 1; }
     .dep-icon  { font-size: 14px; width: 14px; height: 14px; color: #6a1b9a; }
+    .audio-icon { font-size: 14px; width: 14px; height: 14px; color: #1565c0; cursor: pointer; &:hover { color: #0d47a1; } }
 
     .card-agent { display: flex; align-items: center; gap: 4px; margin-bottom: 2px;
       mat-icon { font-size: 14px; width: 14px; height: 14px; color: var(--text-secondary, #6b7a99); }
@@ -171,6 +176,10 @@ export class KanbanComponent {
   }
 
   canAct(): boolean { return this.auth.isTechnicien(); }
+
+  openAudio(url: string): void {
+    window.open(url, '_blank');
+  }
 
   async prendreEnCharge(i: Intervention): Promise<void> {
     const ok = await this.interventionSvc.update(i.id, { statut: 'En cours', dateDebut: new Date().toISOString() });

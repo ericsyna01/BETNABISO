@@ -620,8 +620,8 @@ export class SupportComponent {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   );
 
-  assignerSignalement(n: { id: string; agentId?: string; message: string; photoUrl?: string | null }): void {
-    this.router.navigate(['/support/assign'], { queryParams: { agentId: n.agentId, description: n.message, photoUrl: n.photoUrl, notifId: n.id } });
+  assignerSignalement(n: { id: string; agentId?: string; message: string; photoUrl?: string | null; audioUrl?: string | null }): void {
+    this.router.navigate(['/support/assign'], { queryParams: { agentId: n.agentId, description: n.message, photoUrl: n.photoUrl, audioUrl: n.audioUrl, notifId: n.id } });
   }
 
   async traiterSignalement(n: { id: string }): Promise<void> {
