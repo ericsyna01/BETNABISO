@@ -41,28 +41,39 @@ function toDateStr(d: Date): string {
           </mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Titre</mat-label>
-            <input matInput [(ngModel)]="formTitre" placeholder="ex: Rappeler le fournisseur X">
-          </mat-form-field>
-
-          <div class="add-row">
-            <mat-form-field appearance="outline" class="date-input">
-              <mat-label>Date</mat-label>
-              <input matInput [matDatepicker]="picker" [(ngModel)]="formDate" placeholder="jj/mm/aaaa" readonly>
-              <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-              <mat-datepicker #picker></mat-datepicker>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="heure-input">
-              <mat-label>Heure (optionnel)</mat-label>
-              <input matInput type="time" [(ngModel)]="formHeure">
+          <div class="pill-field full-width">
+            <label class="pill-label">Titre</label>
+            <mat-form-field appearance="outline" class="pill-select">
+              <mat-icon matPrefix>title</mat-icon>
+              <input matInput [(ngModel)]="formTitre" placeholder="ex: Rappeler le fournisseur X">
             </mat-form-field>
           </div>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Note (optionnel)</mat-label>
-            <textarea matInput rows="2" [(ngModel)]="formNote" placeholder="Détails..."></textarea>
-          </mat-form-field>
+          <div class="add-row">
+            <div class="pill-field date-input">
+              <label class="pill-label">Date</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>event</mat-icon>
+                <input matInput [matDatepicker]="picker" [(ngModel)]="formDate" placeholder="jj/mm/aaaa" readonly>
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+            </div>
+            <div class="pill-field heure-input">
+              <label class="pill-label">Heure (optionnel)</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>schedule</mat-icon>
+                <input matInput type="time" [(ngModel)]="formHeure">
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="pill-field full-width">
+            <label class="pill-label">Note (optionnel)</label>
+            <mat-form-field appearance="outline" class="pill-select pill-textarea">
+              <textarea matInput rows="2" [(ngModel)]="formNote" placeholder="Détails..."></textarea>
+            </mat-form-field>
+          </div>
 
           <div class="form-actions">
             @if (editId()) {
