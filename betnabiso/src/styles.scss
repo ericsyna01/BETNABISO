@@ -797,3 +797,15 @@ html.dark-mode {
     &::placeholder { color: #b0bec5; }
   }
 }
+/* .pill-select masque par défaut la zone sous le champ (hint/erreur), pensée
+   pour les filtres compacts. Ce variant la rétablit pour les champs de
+   formulaire qui en ont besoin (ex. compteur de caractères, message de
+   validation), en gardant un style discret cohérent avec la pilule. */
+.pill-select.pill-with-hint {
+  .mat-mdc-form-field-subscript-wrapper {
+    display: block; margin-top: 4px; padding: 0 3px;
+  }
+  .mat-mdc-form-field-hint-wrapper, .mat-mdc-form-field-error-wrapper { padding: 0; }
+  .mat-mdc-form-field-hint { font-size: 11px; color: #94a3b8; }
+  .mat-mdc-form-field-error { font-size: 11px; }
+}

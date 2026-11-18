@@ -61,22 +61,24 @@ import { User } from '../../../core/models/user.model';
                   </div>
                 </div>
 
-                <mat-form-field appearance="outline" style="width:100%">
-                  <mat-label>Rechercher un agent *</mat-label>
-                  <mat-icon matPrefix>search</mat-icon>
-                  <input matInput formControlName="agentSearch" [matAutocomplete]="agentAuto"
-                         placeholder="Nom, AnyDesk ID, identifiant...">
-                  <mat-autocomplete #agentAuto="matAutocomplete" (optionSelected)="onAgentSelect($event)">
-                    @for (a of filteredAgents(); track a.id) {
-                      <mat-option [value]="a.nomAgent">
-                        <div class="agent-option">
-                          <div class="agent-option-main">{{ a.nomAgent }}</div>
-                          <div class="agent-option-sub">AnyDesk: {{ a.anydesk }} · {{ a.zone }}</div>
-                        </div>
-                      </mat-option>
-                    }
-                  </mat-autocomplete>
-                </mat-form-field>
+                <div class="pill-field" style="width:100%">
+                  <label class="pill-label">Rechercher un agent *</label>
+                  <mat-form-field appearance="outline" class="pill-select">
+                    <mat-icon matPrefix>search</mat-icon>
+                    <input matInput formControlName="agentSearch" [matAutocomplete]="agentAuto"
+                           placeholder="Nom, AnyDesk ID, identifiant...">
+                    <mat-autocomplete #agentAuto="matAutocomplete" (optionSelected)="onAgentSelect($event)">
+                      @for (a of filteredAgents(); track a.id) {
+                        <mat-option [value]="a.nomAgent">
+                          <div class="agent-option">
+                            <div class="agent-option-main">{{ a.nomAgent }}</div>
+                            <div class="agent-option-sub">AnyDesk: {{ a.anydesk }} · {{ a.zone }}</div>
+                          </div>
+                        </mat-option>
+                      }
+                    </mat-autocomplete>
+                  </mat-form-field>
+                </div>
 
                 @if (selectedAgent()) {
                   <div class="selected-agent-card">
@@ -181,42 +183,50 @@ import { User } from '../../../core/models/user.model';
                 </div>
 
                 <div class="form-grid">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Type d'intervention *</mat-label>
-                    <mat-icon matPrefix>build</mat-icon>
-                    <mat-select formControlName="type">
-                      @for (t of types(); track t.id) {
-                        <mat-option [value]="t.label">{{ t.label }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
+                  <div class="pill-field">
+                    <label class="pill-label">Type d'intervention *</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>build</mat-icon>
+                      <mat-select formControlName="type">
+                        @for (t of types(); track t.id) {
+                          <mat-option [value]="t.label">{{ t.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
 
                   <div class="datetime-group">
-                    <mat-form-field appearance="outline" floatLabel="always" class="date-field">
-                      <mat-label>Date planifiée</mat-label>
-                      <mat-icon matPrefix>event</mat-icon>
-                      <input matInput [matDatepicker]="planPicker" [(ngModel)]="pickerDate"
-                             [ngModelOptions]="{standalone: true}" [min]="today" placeholder="jj/mm/aaaa" readonly>
-                      <mat-datepicker-toggle matSuffix [for]="planPicker"></mat-datepicker-toggle>
-                      <mat-datepicker #planPicker></mat-datepicker>
-                    </mat-form-field>
-                    <mat-form-field appearance="outline" class="hour-field">
-                      <mat-label>Heure</mat-label>
-                      <mat-icon matPrefix>schedule</mat-icon>
-                      <mat-select [(ngModel)]="pickerHour" [ngModelOptions]="{standalone: true}">
-                        @for (h of hours; track h) {
-                          <mat-option [value]="h">{{ h | number:'2.0-0' }}h</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                    <mat-form-field appearance="outline" class="min-field">
-                      <mat-label>Minutes</mat-label>
-                      <mat-select [(ngModel)]="pickerMinute" [ngModelOptions]="{standalone: true}">
-                        @for (m of minutes; track m) {
-                          <mat-option [value]="m">{{ m | number:'2.0-0' }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
+                    <div class="pill-field date-field">
+                      <label class="pill-label">Date planifiée</label>
+                      <mat-form-field appearance="outline" class="pill-select">
+                        <mat-icon matPrefix>event</mat-icon>
+                        <input matInput [matDatepicker]="planPicker" [(ngModel)]="pickerDate"
+                               [ngModelOptions]="{standalone: true}" [min]="today" placeholder="jj/mm/aaaa" readonly>
+                        <mat-datepicker-toggle matSuffix [for]="planPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #planPicker></mat-datepicker>
+                      </mat-form-field>
+                    </div>
+                    <div class="pill-field hour-field">
+                      <label class="pill-label">Heure</label>
+                      <mat-form-field appearance="outline" class="pill-select">
+                        <mat-icon matPrefix>schedule</mat-icon>
+                        <mat-select [(ngModel)]="pickerHour" [ngModelOptions]="{standalone: true}">
+                          @for (h of hours; track h) {
+                            <mat-option [value]="h">{{ h | number:'2.0-0' }}h</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
+                    <div class="pill-field min-field">
+                      <label class="pill-label">Minutes</label>
+                      <mat-form-field appearance="outline" class="pill-select">
+                        <mat-select [(ngModel)]="pickerMinute" [ngModelOptions]="{standalone: true}">
+                          @for (m of minutes; track m) {
+                            <mat-option [value]="m">{{ m | number:'2.0-0' }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
                   </div>
                 </div>
 
@@ -235,15 +245,17 @@ import { User } from '../../../core/models/user.model';
                   </div>
                 </div>
 
-                <mat-form-field appearance="outline" style="width:100%">
-                  <mat-label>Description *</mat-label>
-                  <textarea matInput formControlName="description" rows="4"
-                            placeholder="Décrivez en détail ce que le technicien doit faire..."></textarea>
-                  @if (form.get('description')?.hasError('required') && form.get('description')?.touched) {
-                    <mat-error>La description est requise</mat-error>
-                  }
-                  <mat-hint align="end">{{ form.get('description')?.value?.length ?? 0 }}/500</mat-hint>
-                </mat-form-field>
+                <div class="pill-field" style="width:100%">
+                  <label class="pill-label">Description *</label>
+                  <mat-form-field appearance="outline" class="pill-select pill-textarea pill-with-hint">
+                    <textarea matInput formControlName="description" rows="4"
+                              placeholder="Décrivez en détail ce que le technicien doit faire..."></textarea>
+                    @if (form.get('description')?.hasError('required') && form.get('description')?.touched) {
+                      <mat-error>La description est requise</mat-error>
+                    }
+                    <mat-hint align="end">{{ form.get('description')?.value?.length ?? 0 }}/500</mat-hint>
+                  </mat-form-field>
+                </div>
               </div>
 
               <!-- Actions -->
