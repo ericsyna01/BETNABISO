@@ -1083,9 +1083,14 @@ type Period = 'month' | 'trimestre' | 'all';
 
     /* ── Filtres ── */
     .filter-card { mat-card-header { padding:12px 16px 0; mat-card-title{display:flex;align-items:center;gap:8px;font-size:14px;} } mat-card-content{padding:12px 16px 16px !important;} }
-    .filter-row { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
-    .filter-grid { flex:1 1 480px; display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px; mat-form-field{width:100%;} }
-    .filter-actions { display:flex;gap:8px;flex:0 0 auto; button{height:44px;} }
+    /* Tout sur une seule ligne, y compris les boutons : pas de wrap, défilement
+       horizontal si l'écran est trop étroit pour tout contenir. */
+    .filter-row { display:flex; align-items:flex-end; gap:16px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; }
+    .filter-grid { display:flex; gap:12px; flex-wrap:nowrap; flex:0 0 auto;
+      .pill-field { flex:0 0 180px; min-width:180px; }
+      mat-form-field{width:100%;}
+    }
+    .filter-actions { display:flex;gap:8px;flex:0 0 auto; white-space:nowrap; button{height:44px;} }
 
     /* ── Barres ── */
     .history-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; @media(max-width:768px){grid-template-columns:1fr;} }
