@@ -61,40 +61,50 @@ import { Outil, OutilType, OUTIL_ICON_PRESETS } from '../../core/models/outil.mo
             }
 
             <div class="add-row">
-              <mat-form-field appearance="outline" class="label-input">
-                <mat-label>Nom</mat-label>
-                <input matInput [(ngModel)]="formLabel" placeholder="ex: AnyDesk">
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="icon-input">
-                <mat-label>Icône</mat-label>
-                <mat-select [(ngModel)]="formIcone">
-                  @for (i of iconPresets; track i) {
-                    <mat-option [value]="i">
-                      <mat-icon style="vertical-align:middle;margin-right:6px">{{ i }}</mat-icon>{{ i }}
-                    </mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <mat-icon class="icon-preview">{{ formIcone || 'help' }}</mat-icon>
+              <div class="pill-field label-input">
+                <label class="pill-label">Nom</label>
+                <mat-form-field appearance="outline" class="pill-select">
+                  <mat-icon matPrefix>label</mat-icon>
+                  <input matInput [(ngModel)]="formLabel" placeholder="ex: AnyDesk">
+                </mat-form-field>
+              </div>
+              <div class="pill-field icon-input">
+                <label class="pill-label">Icône</label>
+                <mat-form-field appearance="outline" class="pill-select">
+                  <mat-icon matPrefix>{{ formIcone || 'help' }}</mat-icon>
+                  <mat-select [(ngModel)]="formIcone">
+                    @for (i of iconPresets; track i) {
+                      <mat-option [value]="i">
+                        <mat-icon style="vertical-align:middle;margin-right:6px">{{ i }}</mat-icon>{{ i }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
             </div>
 
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Description (optionnel)</mat-label>
-              <textarea matInput rows="2" [(ngModel)]="formDescription" placeholder="ex: Prise en main à distance de la caisse"></textarea>
-            </mat-form-field>
+            <div class="pill-field full-width">
+              <label class="pill-label">Description (optionnel)</label>
+              <mat-form-field appearance="outline" class="pill-select pill-textarea">
+                <textarea matInput rows="2" [(ngModel)]="formDescription" placeholder="ex: Prise en main à distance de la caisse"></textarea>
+              </mat-form-field>
+            </div>
 
             <div class="add-row">
-              <mat-form-field appearance="outline" class="label-input">
-                <mat-label>Catégorie</mat-label>
-                <mat-select [(ngModel)]="formCategorie">
-                  <mat-option value="">Non classé</mat-option>
-                  @for (c of categories(); track c.id) {
-                    <mat-option [value]="c.label">
-                      <mat-icon style="vertical-align:middle;margin-right:6px">{{ c.icone || 'label' }}</mat-icon>{{ c.label }}
-                    </mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <div class="pill-field label-input">
+                <label class="pill-label">Catégorie</label>
+                <mat-form-field appearance="outline" class="pill-select">
+                  <mat-icon matPrefix>category</mat-icon>
+                  <mat-select [(ngModel)]="formCategorie">
+                    <mat-option value="">Non classé</mat-option>
+                    @for (c of categories(); track c.id) {
+                      <mat-option [value]="c.label">
+                        <mat-icon style="vertical-align:middle;margin-right:6px">{{ c.icone || 'label' }}</mat-icon>{{ c.label }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
               <button type="button" mat-stroked-button matTooltip="Gérer les catégories dans Administration > Types"
                       [routerLink]="['/admin/types']">
                 <mat-icon>settings</mat-icon>
@@ -102,11 +112,13 @@ import { Outil, OutilType, OUTIL_ICON_PRESETS } from '../../core/models/outil.mo
             </div>
 
             @if (formType === 'lien' || editId()) {
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>URL de téléchargement officielle</mat-label>
-                <mat-icon matPrefix>link</mat-icon>
-                <input matInput [(ngModel)]="formUrl" placeholder="https://anydesk.com/fr/downloads">
-              </mat-form-field>
+              <div class="pill-field full-width">
+                <label class="pill-label">URL de téléchargement officielle</label>
+                <mat-form-field appearance="outline" class="pill-select">
+                  <mat-icon matPrefix>link</mat-icon>
+                  <input matInput [(ngModel)]="formUrl" placeholder="https://anydesk.com/fr/downloads">
+                </mat-form-field>
+              </div>
             } @else {
               <div class="file-picker">
                 <input type="file" #fileInput style="display:none" (change)="onFileSelected($event)">
@@ -226,12 +238,45 @@ import { Outil, OutilType, OUTIL_ICON_PRESETS } from '../../core/models/outil.mo
       mat-icon { color: var(--primary-light); font-size: 18px; }
     }
 
-    .type-toggle { align-self: flex-start; margin-bottom: 4px; }
+    :host ::ng-deep .type-toggle.mat-button-toggle-group {
+      align-self: flex-start;
+      margin-bottom: 4px;
+      display: inline-flex;
+      background: #f0f4f8;
+      border-radius: 10px;
+      padding: 4px;
+      gap: 4px;
+      border: none;
+      box-shadow: none;
+
+      .mat-button-toggle-appearance-standard {
+        border: none !important;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .mat-button-toggle-checkbox-wrapper { display: none; }
+
+      .mat-button-toggle-button { height: 38px; padding: 0 16px; }
+
+      .mat-button-toggle-label-content {
+        padding: 0; line-height: 38px; font-size: 13px; font-weight: 500; color: #5a6b7c;
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+      .mat-button-toggle:not(.mat-button-toggle-checked):hover .mat-button-toggle-button { background: rgba(0,0,0,.04); }
+
+      .mat-button-toggle-checked {
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        .mat-button-toggle-label-content { color: #1a3a5c; font-weight: 600; }
+      }
+    }
 
     .add-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .label-input { flex: 2; min-width: 180px; }
     .icon-input { flex: 1; min-width: 160px; }
-    .icon-preview { font-size: 28px; width: 28px; height: 28px; color: var(--primary); }
     .full-width { width: 100%; }
 
     .file-picker { margin-top: -4px; margin-bottom: 4px; }
