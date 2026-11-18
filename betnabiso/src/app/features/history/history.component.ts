@@ -426,6 +426,7 @@ type Period = 'month' | 'trimestre' | 'all';
             <mat-card class="filter-card">
               <mat-card-header><mat-card-title><mat-icon>filter_list</mat-icon> Filtres avancés</mat-card-title></mat-card-header>
               <mat-card-content>
+                <div class="filter-row">
                 <div class="filter-grid">
                   <div class="pill-field">
                     <label class="pill-label">Période</label>
@@ -493,6 +494,7 @@ type Period = 'month' | 'trimestre' | 'all';
                 <div class="filter-actions">
                   <button mat-stroked-button (click)="resetFilters()"><mat-icon>clear</mat-icon> Réinitialiser</button>
                   <button mat-raised-button color="primary" (click)="applyFilters()"><mat-icon>search</mat-icon> Appliquer</button>
+                </div>
                 </div>
               </mat-card-content>
             </mat-card>
@@ -826,6 +828,7 @@ type Period = 'month' | 'trimestre' | 'all';
             <mat-card class="filter-card">
               <mat-card-header><mat-card-title><mat-icon>filter_list</mat-icon> Filtres</mat-card-title></mat-card-header>
               <mat-card-content>
+                <div class="filter-row">
                 <div class="filter-grid">
                   <div class="pill-field">
                     <label class="pill-label">Période</label>
@@ -877,6 +880,7 @@ type Period = 'month' | 'trimestre' | 'all';
                   <button mat-stroked-button (click)="resetMissionFilters()"><mat-icon>clear</mat-icon> Réinitialiser</button>
                   <button mat-raised-button color="primary" (click)="applyMissionFilters()"><mat-icon>search</mat-icon> Appliquer</button>
                   <button mat-stroked-button (click)="exportMissionsCsv()"><mat-icon>table_view</mat-icon> CSV</button>
+                </div>
                 </div>
               </mat-card-content>
             </mat-card>
@@ -1079,8 +1083,9 @@ type Period = 'month' | 'trimestre' | 'all';
 
     /* ── Filtres ── */
     .filter-card { mat-card-header { padding:12px 16px 0; mat-card-title{display:flex;align-items:center;gap:8px;font-size:14px;} } mat-card-content{padding:12px 16px 16px !important;} }
-    .filter-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px; mat-form-field{width:100%;} }
-    .filter-actions { display:flex;justify-content:flex-end;gap:8px;margin-top:8px; }
+    .filter-row { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+    .filter-grid { flex:1 1 480px; display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px; mat-form-field{width:100%;} }
+    .filter-actions { display:flex;gap:8px;flex:0 0 auto; button{height:44px;} }
 
     /* ── Barres ── */
     .history-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; @media(max-width:768px){grid-template-columns:1fr;} }
