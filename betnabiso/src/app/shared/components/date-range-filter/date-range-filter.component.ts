@@ -66,7 +66,8 @@ function pad(n: number): string { return n.toString().padStart(2, '0'); }
 
       @if (open()) {
         <div class="drf-panel" #panelRef (click)="$event.stopPropagation()"
-             [style.left.px]="panelOffsetX() || null">
+             [style.top.px]="panelTop()"
+             [style.left.px]="panelLeftPos()">
 
           <div class="drf-presets">
             @for (p of presets; track p.key) {
@@ -200,7 +201,13 @@ function pad(n: number): string { return n.toString().padStart(2, '0'); }
     .drf-trigger-clear { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0; &:hover { color: #ef4444; } }
 
     .drf-panel {
-      position: absolute; top: calc(100% + 8px); left: 0; z-index: 300;
+      /* position:fixed (et non absolute) + coordonnées calculées en JS depuis
+         la position réelle du déclencheur à l'écran : un panneau absolute
+         reste dans la chaîne de blocs englobants de ses ancêtres, donc un
+         ancêtre avec overflow (ex. une barre de filtres qui défile
+         horizontalement) le rogne et le rend invisible au clic. En fixed, il
+         échappe à ce rognage quel que soit le conteneur qui l'héberge. */
+      position: fixed; z-index: 300;
       background: white; border: 1px solid #e2e8f0; border-radius: 14px;
       box-shadow: 0 16px 48px rgba(16,35,64,0.18);
       display: flex; overflow: hidden;
@@ -297,7 +304,8 @@ export class DateRangeFilterComponent implements OnChanges {
   @ViewChild('panelRef') panelRef?: ElementRef<HTMLElement>;
 
   open = signal(false);
-  panelOffsetX = signal(0);
+  panelTop = signal<number | null>(null);
+  panelLeftPos = signal<number | null>(null);
   draftStart = signal<Date | null>(null);
   draftEnd   = signal<Date | null>(null);
   activePreset = signal<string | null>(null);
@@ -334,27 +342,47 @@ export class DateRangeFilterComponent implements OnChanges {
     this.draftEnd.set(this.value.end);
     this.activePreset.set(null);
     this.leftMonth.set(startOfMonth(this.value.start ?? new Date()));
-    this.panelOffsetX.set(0);
+    this.panelTop.set(null);
+    this.panelLeftPos.set(null);
     this.open.set(true);
+    // Positionnement initial dès l'ouverture, depuis le déclencheur (toujours
+    // mesurable) : évite un flash en haut à gauche de l'écran le temps que le
+    // panneau lui-même existe dans le DOM pour être affiné ci-dessous.
+    this.positionFromTrigger();
     // Le panneau n'existe pas encore dans le DOM tant que @if (open()) n'a pas
-    // été rendu ; on attend le prochain tick pour pouvoir le mesurer.
+    // été rendu ; on attend le prochain tick pour pouvoir le mesurer et
+    // corriger un éventuel débordement à droite.
     setTimeout(() => this.adjustPanelPosition());
+  }
+
+  private positionFromTrigger(): void {
+    if (window.innerWidth <= 640) return;
+    const trigger = (this.el.nativeElement as HTMLElement).querySelector('.drf-trigger');
+    if (!trigger) return;
+    const r = trigger.getBoundingClientRect();
+    this.panelTop.set(r.bottom + 8);
+    this.panelLeftPos.set(r.left);
   }
 
   private adjustPanelPosition(): void {
     // Sur mobile, le panneau passe en position fixed pleine largeur (voir le
-    // @media 640px) : aucun recalage horizontal à faire dans ce cas.
+    // @media 640px) : aucun recalage à faire dans ce cas.
     if (window.innerWidth <= 640) return;
     const panel = this.panelRef?.nativeElement;
     if (!panel) return;
     const panelRect = panel.getBoundingClientRect();
     const margin = 12;
     const overflowRight = panelRect.right - window.innerWidth + margin;
-    const overflowLeft = margin - panelRect.left;
     if (overflowRight > 0) {
-      this.panelOffsetX.set(-overflowRight);
-    } else if (overflowLeft > 0) {
-      this.panelOffsetX.set(overflowLeft);
+      this.panelLeftPos.set(Math.max(margin, panelRect.left - overflowRight));
+    }
+    // En position fixed, le panneau ne suit plus le scroll de la page : si le
+    // bas déborde du viewport (déclencheur proche du bas de l'écran), il faut
+    // le remonter nous-mêmes, sinon le pied (bouton Appliquer) est
+    // inatteignable — avant, en position absolute, scroller la page suffisait.
+    const overflowBottom = panelRect.bottom - window.innerHeight + margin;
+    if (overflowBottom > 0) {
+      this.panelTop.set(Math.max(margin, panelRect.top - overflowBottom));
     }
   }
 
