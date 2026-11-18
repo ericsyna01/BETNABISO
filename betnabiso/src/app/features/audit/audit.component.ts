@@ -67,23 +67,28 @@ const ACTION_BG: Record<string, string> = {
       <div class="audit-header">
         <h2><mat-icon>security</mat-icon> Journal d'audit</h2>
         <div class="header-actions">
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Filtrer par ressource</mat-label>
-            <mat-select [(ngModel)]="resourceFilter" (ngModelChange)="load()">
-              <mat-option value="">Toutes</mat-option>
-              <mat-option value="intervention">Interventions</mat-option>
-              <mat-option value="evaluation">Évaluations</mat-option>
-              <mat-option value="user">Utilisateurs</mat-option>
-              <mat-option value="group">Groupes</mat-option>
-              <mat-option value="agent_modification">Demandes de modification</mat-option>
-              <mat-option value="agent">Agents</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Rechercher</mat-label>
-            <input matInput [(ngModel)]="searchText" placeholder="Nom, action…" />
-            <mat-icon matSuffix>search</mat-icon>
-          </mat-form-field>
+          <div class="pill-field filter-field">
+            <label class="pill-label">Filtrer par ressource</label>
+            <mat-form-field appearance="outline" class="pill-select">
+              <mat-icon matPrefix>filter_alt</mat-icon>
+              <mat-select [(ngModel)]="resourceFilter" (ngModelChange)="load()">
+                <mat-option value="">Toutes</mat-option>
+                <mat-option value="intervention">Interventions</mat-option>
+                <mat-option value="evaluation">Évaluations</mat-option>
+                <mat-option value="user">Utilisateurs</mat-option>
+                <mat-option value="group">Groupes</mat-option>
+                <mat-option value="agent_modification">Demandes de modification</mat-option>
+                <mat-option value="agent">Agents</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="pill-field filter-field">
+            <label class="pill-label">Rechercher</label>
+            <mat-form-field appearance="outline" class="pill-select">
+              <mat-icon matPrefix>search</mat-icon>
+              <input matInput [(ngModel)]="searchText" placeholder="Nom, action…" />
+            </mat-form-field>
+          </div>
           <button mat-stroked-button (click)="exportCsv()" matTooltip="Exporter CSV">
             <mat-icon>download</mat-icon> CSV
           </button>
