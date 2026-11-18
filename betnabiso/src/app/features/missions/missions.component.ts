@@ -454,48 +454,59 @@ export class MissionDetailDialogComponent {
 
       <!-- Barre de filtres -->
       <div class="filters-bar">
-        <mat-form-field appearance="outline" class="filter-search">
-          <mat-label>Rechercher</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Titre, description...">
-          @if (search()) {
-            <button matSuffix mat-icon-button (click)="search.set('')"><mat-icon>close</mat-icon></button>
-          }
-        </mat-form-field>
+        <div class="pill-field filter-search">
+          <label class="pill-label">Rechercher</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Titre, description...">
+            @if (search()) {
+              <button matSuffix mat-icon-button (click)="search.set('')"><mat-icon>close</mat-icon></button>
+            }
+          </mat-form-field>
+        </div>
 
         @if (auth.isAdmin()) {
-          <mat-form-field appearance="outline" style="width:155px">
-            <mat-label>Agent</mat-label>
-            <mat-select [value]="filterTech()" (selectionChange)="filterTech.set($event.value)">
-              <mat-option value="">Tous</mat-option>
-              @for (t of techniciens(); track t.id) {
-                <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <div class="pill-field" style="width:170px">
+            <label class="pill-label">Agent</label>
+            <mat-form-field appearance="outline" class="pill-select">
+              <mat-icon matPrefix>engineering</mat-icon>
+              <mat-select [value]="filterTech()" (selectionChange)="filterTech.set($event.value)">
+                <mat-option value="">Tous</mat-option>
+                @for (t of techniciens(); track t.id) {
+                  <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
         }
 
-        <mat-form-field appearance="outline" style="width:145px">
-          <mat-label>Statut</mat-label>
-          <mat-select [value]="filterStatut()" (selectionChange)="filterStatut.set($event.value)">
-            <mat-option value="">Tous</mat-option>
-            <mat-option value="assignée">Assignée</mat-option>
-            <mat-option value="acceptée">Acceptée</mat-option>
-            <mat-option value="en_cours">En cours</mat-option>
-            <mat-option value="terminée">Terminée</mat-option>
-            <mat-option value="refusée">Refusée</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="width:160px">
+          <label class="pill-label">Statut</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>flag</mat-icon>
+            <mat-select [value]="filterStatut()" (selectionChange)="filterStatut.set($event.value)">
+              <mat-option value="">Tous</mat-option>
+              <mat-option value="assignée">Assignée</mat-option>
+              <mat-option value="acceptée">Acceptée</mat-option>
+              <mat-option value="en_cours">En cours</mat-option>
+              <mat-option value="terminée">Terminée</mat-option>
+              <mat-option value="refusée">Refusée</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:125px">
-          <mat-label>Priorité</mat-label>
-          <mat-select [value]="filterPrio()" (selectionChange)="filterPrio.set($event.value)">
-            <mat-option value="">Toutes</mat-option>
-            <mat-option value="Haute">🔴 Haute</mat-option>
-            <mat-option value="Normale">🟡 Normale</mat-option>
-            <mat-option value="Basse">🟢 Basse</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="width:140px">
+          <label class="pill-label">Priorité</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>priority_high</mat-icon>
+            <mat-select [value]="filterPrio()" (selectionChange)="filterPrio.set($event.value)">
+              <mat-option value="">Toutes</mat-option>
+              <mat-option value="Haute">🔴 Haute</mat-option>
+              <mat-option value="Normale">🟡 Normale</mat-option>
+              <mat-option value="Basse">🟢 Basse</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
         <span class="result-count">{{ sortedFiltered().length }} résultat(s)</span>
 
