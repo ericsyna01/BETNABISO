@@ -28,12 +28,14 @@ import { ConfirmService } from '../../../core/services/confirm.service';
         </mat-card-header>
         <mat-card-content>
           <div class="add-row">
-            <mat-form-field appearance="outline" class="zone-input">
-              <mat-label>Nom de la zone</mat-label>
-              <mat-icon matPrefix>location_on</mat-icon>
-              <input matInput [(ngModel)]="newZone" placeholder="ex: Dakar Plateau"
-                     (keydown.enter)="addZone()">
-            </mat-form-field>
+            <div class="pill-field zone-input">
+              <label class="pill-label">Nom de la zone</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>location_on</mat-icon>
+                <input matInput [(ngModel)]="newZone" placeholder="ex: Dakar Plateau"
+                       (keydown.enter)="addZone()">
+              </mat-form-field>
+            </div>
             <button mat-raised-button color="primary" (click)="addZone()" [disabled]="!newZone.trim()">
               <mat-icon>add</mat-icon> Ajouter
             </button>
@@ -88,8 +90,9 @@ import { ConfirmService } from '../../../core/services/confirm.service';
       mat-icon { color: var(--primary-light); font-size: 18px; }
     }
 
-    .add-row { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+    .add-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
     .zone-input { flex: 1; min-width: 160px; }
+    .add-row button { height: 44px; }
 
     .count-badge { background: var(--primary); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700; margin-left: 4px; }
 

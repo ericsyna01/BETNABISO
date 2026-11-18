@@ -11,17 +11,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { InterventionService } from '../../core/services/intervention.service';
+import { Intervention } from '../../core/models/intervention.model';
 import { MissionService } from '../../core/services/mission.service';
 import { MissionStatut } from '../../core/models/mission.model';
 import { UserService } from '../../core/services/user.service';
 import { ZoneService } from '../../core/services/zone.service';
 import { ExportService } from '../../core/services/export.service';
 import { TypeLabelService } from '../../core/services/type-label.service';
+import { DateRangeFilterComponent, DateRangeValue } from '../../shared/components/date-range-filter/date-range-filter.component';
 
 type Period = 'month' | 'trimestre' | 'all';
 
@@ -32,7 +33,7 @@ type Period = 'month' | 'trimestre' | 'all';
     FormsModule, DatePipe, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatTableModule, MatDividerModule, MatTooltipModule,
-    MatDatepickerModule, MatNativeDateModule, MatChipsModule, MatTabsModule
+    MatChipsModule, MatTabsModule, MatPaginatorModule, DateRangeFilterComponent
   ],
   template: `
     <div class="page-container">
@@ -409,6 +410,13 @@ type Period = 'month' | 'trimestre' | 'all';
                   <div class="stat-label">Durée moyenne</div>
                 </div>
               </div>
+              <div class="stat-card signalement">
+                <div class="stat-icon"><mat-icon>qr_code_2</mat-icon></div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ countViaSignalement() }}</div>
+                  <div class="stat-label">Issues d'un signalement QR</div>
+                </div>
+              </div>
             </div>
 
             <!-- Filtres avancés -->
@@ -416,52 +424,68 @@ type Period = 'month' | 'trimestre' | 'all';
               <mat-card-header><mat-card-title><mat-icon>filter_list</mat-icon> Filtres avancés</mat-card-title></mat-card-header>
               <mat-card-content>
                 <div class="filter-grid">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Date début</mat-label>
-                    <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="pickerDebutCal" [(ngModel)]="pickerDebut" placeholder="jj/mm/aaaa" readonly>
-                    <mat-datepicker-toggle matIconSuffix [for]="pickerDebutCal"></mat-datepicker-toggle>
-                    <mat-datepicker #pickerDebutCal></mat-datepicker>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Date fin</mat-label>
-                    <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="pickerFinCal" [(ngModel)]="pickerFin" placeholder="jj/mm/aaaa" readonly>
-                    <mat-datepicker-toggle matIconSuffix [for]="pickerFinCal"></mat-datepicker-toggle>
-                    <mat-datepicker #pickerFinCal></mat-datepicker>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Technicien</mat-label>
-                    <mat-select [(ngModel)]="f.technicienId">
-                      <mat-option value="">Tous</mat-option>
-                      @for (t of techniciens(); track t.id) {
-                        <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Zone</mat-label>
-                    <mat-select [(ngModel)]="f.zone">
-                      <mat-option value="">Toutes</mat-option>
-                      @for (z of zones(); track z) { <mat-option [value]="z">{{ z }}</mat-option> }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Type</mat-label>
-                    <mat-select [(ngModel)]="f.type">
-                      <mat-option value="">Tous</mat-option>
-                      @for (t of types(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Statut</mat-label>
-                    <mat-select [(ngModel)]="f.statut">
-                      <mat-option value="">Tous</mat-option>
-                      <mat-option value="Terminée">Terminée</mat-option>
-                      <mat-option value="En cours">En cours</mat-option>
-                      <mat-option value="Échec">Échec</mat-option>
-                    </mat-select>
-                  </mat-form-field>
+                  <div class="pill-field">
+                    <label class="pill-label">Période</label>
+                    <app-date-range-filter
+                      [value]="journalDateRange()"
+                      (valueChange)="onJournalDateRangeChange($event)"
+                      placeholder="Toutes les dates">
+                    </app-date-range-filter>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Technicien</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>engineering</mat-icon>
+                      <mat-select [(ngModel)]="f.technicienId">
+                        <mat-option value="">Tous</mat-option>
+                        @for (t of techniciens(); track t.id) {
+                          <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Zone</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>place</mat-icon>
+                      <mat-select [(ngModel)]="f.zone">
+                        <mat-option value="">Toutes</mat-option>
+                        @for (z of zones(); track z) { <mat-option [value]="z">{{ z }}</mat-option> }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Type</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>category</mat-icon>
+                      <mat-select [(ngModel)]="f.type">
+                        <mat-option value="">Tous</mat-option>
+                        @for (t of types(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Statut</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>flag</mat-icon>
+                      <mat-select [(ngModel)]="f.statut">
+                        <mat-option value="">Tous</mat-option>
+                        <mat-option value="Terminée">Terminée</mat-option>
+                        <mat-option value="En cours">En cours</mat-option>
+                        <mat-option value="Échec">Échec</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Origine</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>qr_code_2</mat-icon>
+                      <mat-select [(ngModel)]="f.origine">
+                        <mat-option value="">Toutes</mat-option>
+                        <mat-option value="signalement">Signalement QR uniquement</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
                 </div>
                 <div class="filter-actions">
                   <button mat-stroked-button (click)="resetFilters()"><mat-icon>clear</mat-icon> Réinitialiser</button>
@@ -503,7 +527,7 @@ type Period = 'month' | 'trimestre' | 'all';
               <mat-card-header><mat-card-title>Liste détaillée ({{ filtered().length }})</mat-card-title></mat-card-header>
               <mat-card-content style="padding:0">
                 <div class="table-container" style="border-radius:0;box-shadow:none">
-                  <table mat-table [dataSource]="filtered()">
+                  <table mat-table [dataSource]="pagedFiltered()">
                     <ng-container matColumnDef="date">
                       <th mat-header-cell *matHeaderCellDef class="sortable-th" (click)="sort('date')">
                         <div class="th-inner">Date <mat-icon class="sort-icon" [class.sort-active]="sortField()==='date'">{{ sortIcon('date') }}</mat-icon></div>
@@ -546,13 +570,25 @@ type Period = 'month' | 'trimestre' | 'all';
                       </th>
                       <td mat-cell *matCellDef="let i"><span class="status-chip {{ sClass(i.statut) }}">{{ i.statut }}</span></td>
                     </ng-container>
+                    <ng-container matColumnDef="origine">
+                      <th mat-header-cell *matHeaderCellDef>Origine</th>
+                      <td mat-cell *matCellDef="let i">
+                        @if (i.viaSignalement) {
+                          <span class="origine-chip signalement" matTooltip="Créée depuis un signalement agent (QR code)">
+                            <mat-icon>qr_code_2</mat-icon> Signalement
+                          </span>
+                        } @else {
+                          <span class="cell-sub">—</span>
+                        }
+                      </td>
+                    </ng-container>
                     <tr mat-header-row *matHeaderRowDef="cols"></tr>
                     <tr mat-row *matRowDef="let row; columns: cols;"></tr>
                   </table>
 
                   <!-- Cartes (mobile) -->
                   <div class="hx-cards">
-                    @for (i of filtered(); track i.id) {
+                    @for (i of pagedFiltered(); track i.id) {
                       <div class="hx-card">
                         <div class="hx-top">
                           <a [routerLink]="['/agents', i.agentId]" class="link cell-name">{{ i.agentNom }}</a>
@@ -561,11 +597,26 @@ type Period = 'month' | 'trimestre' | 'all';
                         <div class="cell-sub">{{ i.agentZone }} · {{ i.type }}</div>
                         <div class="hx-line"><span>{{ i.dateDebut | date:'dd/MM/yy HH:mm' }}</span><span>{{ i.duree ? i.duree + ' min' : '—' }}</span></div>
                         <div class="hx-line"><span>Technicien</span><span>{{ i.technicienNom }}</span></div>
+                        @if (i.viaSignalement) {
+                          <div class="hx-line">
+                            <span class="origine-chip signalement"><mat-icon>qr_code_2</mat-icon> Signalement QR</span>
+                          </div>
+                        }
                       </div>
                     }
                   </div>
                   @if (filtered().length === 0) {
                     <div class="empty-state"><mat-icon>search_off</mat-icon><h3>Aucun résultat</h3><p>Modifiez les filtres</p></div>
+                  }
+                  @if (filtered().length > 0) {
+                    <mat-paginator
+                      [length]="filtered().length"
+                      [pageSize]="pageSize()"
+                      [pageIndex]="pageIndex()"
+                      [pageSizeOptions]="[10, 25, 50, 100]"
+                      (page)="onPage($event)"
+                      showFirstLastButtons>
+                    </mat-paginator>
                   }
                 </div>
               </mat-card-content>
@@ -773,38 +824,41 @@ type Period = 'month' | 'trimestre' | 'all';
               <mat-card-header><mat-card-title><mat-icon>filter_list</mat-icon> Filtres</mat-card-title></mat-card-header>
               <mat-card-content>
                 <div class="filter-grid">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Date début</mat-label>
-                    <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="mPickerDebutCal" [(ngModel)]="mPickerDebut" placeholder="jj/mm/aaaa" readonly>
-                    <mat-datepicker-toggle matIconSuffix [for]="mPickerDebutCal"></mat-datepicker-toggle>
-                    <mat-datepicker #mPickerDebutCal></mat-datepicker>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Date fin</mat-label>
-                    <mat-icon matPrefix>date_range</mat-icon>
-                    <input matInput [matDatepicker]="mPickerFinCal" [(ngModel)]="mPickerFin" placeholder="jj/mm/aaaa" readonly>
-                    <mat-datepicker-toggle matIconSuffix [for]="mPickerFinCal"></mat-datepicker-toggle>
-                    <mat-datepicker #mPickerFinCal></mat-datepicker>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Technicien</mat-label>
-                    <mat-select [(ngModel)]="mf.technicienId">
-                      <mat-option value="">Tous</mat-option>
-                      @for (t of techniciens(); track t.id) {
-                        <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Type</mat-label>
-                    <mat-select [(ngModel)]="mf.type">
-                      <mat-option value="">Tous</mat-option>
-                      @for (t of missionTypes(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Statut</mat-label>
+                  <div class="pill-field">
+                    <label class="pill-label">Période</label>
+                    <app-date-range-filter
+                      [value]="missionsDateRange()"
+                      (valueChange)="onMissionsDateRangeChange($event)"
+                      [showTime]="false"
+                      placeholder="Toutes les dates">
+                    </app-date-range-filter>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Technicien</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>engineering</mat-icon>
+                      <mat-select [(ngModel)]="mf.technicienId">
+                        <mat-option value="">Tous</mat-option>
+                        @for (t of techniciens(); track t.id) {
+                          <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Type</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                      <mat-icon matPrefix>category</mat-icon>
+                      <mat-select [(ngModel)]="mf.type">
+                        <mat-option value="">Tous</mat-option>
+                        @for (t of missionTypes(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="pill-field">
+                    <label class="pill-label">Statut</label>
+                    <mat-form-field appearance="outline" class="pill-select">
+                    <mat-icon matPrefix>flag</mat-icon>
                     <mat-select [(ngModel)]="mf.statut">
                       <mat-option value="">Tous</mat-option>
                       <mat-option value="assignée">Assignée</mat-option>
@@ -813,7 +867,8 @@ type Period = 'month' | 'trimestre' | 'all';
                       <mat-option value="terminée">Terminée</mat-option>
                       <mat-option value="refusée">Refusée</mat-option>
                     </mat-select>
-                  </mat-form-field>
+                    </mat-form-field>
+                  </div>
                 </div>
                 <div class="filter-actions">
                   <button mat-stroked-button (click)="resetMissionFilters()"><mat-icon>clear</mat-icon> Réinitialiser</button>
@@ -985,6 +1040,12 @@ type Period = 'month' | 'trimestre' | 'all';
       &.blue   { background:#e3f2fd;color:#1565c0; }
     }
     .medal { font-size:18px;line-height:1; }
+    .origine-chip {
+      display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:12px;
+      font-size:11px;font-weight:600;
+      &.signalement { background:#fff3e0;color:#e65100; }
+      mat-icon { font-size:13px;width:13px;height:13px; }
+    }
 
     /* ── Progress bar ── */
     .progress-container { height:6px;background:#eceff1;border-radius:3px;width:80px;display:inline-block;vertical-align:middle;margin-right:6px;overflow:hidden; }
@@ -996,13 +1057,14 @@ type Period = 'month' | 'trimestre' | 'all';
     .taux-label { font-size:12px;font-weight:600;vertical-align:middle; }
 
     /* ── Stats résumé ── */
-    .stats-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px; @media(max-width:768px){grid-template-columns:repeat(2,1fr);} }
+    .stats-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px; @media(max-width:768px){grid-template-columns:repeat(2,1fr);} }
     .stat-card { display:flex;align-items:center;gap:14px;background:white;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);min-width:0;
       &.blue   { border-left:4px solid #1565c0; .stat-icon mat-icon{color:#1565c0;} }
       &.green  { border-left:4px solid #43a047; .stat-icon mat-icon{color:#43a047;} }
       &.orange { border-left:4px solid #fb8c00; .stat-icon mat-icon{color:#fb8c00;} }
       &.purple { border-left:4px solid #8e24aa; .stat-icon mat-icon{color:#8e24aa;} }
       &.error  { border-left:4px solid #e53935; .stat-icon mat-icon{color:#e53935;} }
+      &.signalement { border-left:4px solid #e65100; .stat-icon mat-icon{color:#e65100;} }
     }
     .stat-icon mat-icon { font-size:28px;width:28px;height:28px; }
     .stat-info { min-width:0; }
@@ -1109,7 +1171,7 @@ export class HistoryComponent implements OnInit {
   missionTypes = computed(() => this.typeSvc.getByCategorie('mission'));
   zones = computed(() => this.zoneSvc.getAll());
 
-  cols       = ['date', 'agent', 'zone', 'type', 'technicien', 'duree', 'statut'];
+  cols       = ['date', 'agent', 'zone', 'type', 'technicien', 'duree', 'statut', 'origine'];
   reassCols  = ['date', 'agent', 'from', 'duree', 'to', 'by'];
   techCols      = ['rang', 'nom', 'total', 'terminees', 'echecs', 'enCours', 'taux', 'dureeMoy', 'typePrincipal', 'reassignes', 'missions'];
   supportCols   = ['nom', 'affectations', 'reassignations', 'total'];
@@ -1242,9 +1304,9 @@ export class HistoryComponent implements OnInit {
   });
 
   // ── Filtres avancés (journal détaillé) ──
-  pickerDebut: Date | null = null;
-  pickerFin: Date | null = null;
-  f = { dateDebut: '', dateFin: '', technicienId: '', zone: '', type: '', statut: '' };
+  journalDateRange = signal<DateRangeValue>({ start: null, end: null });
+  onJournalDateRangeChange(v: DateRangeValue): void { this.journalDateRange.set(v); this.pageIndex.set(0); }
+  f = { technicienId: '', zone: '', type: '', statut: '', origine: '' };
   private activeFilters = signal({ ...this.f });
 
   // ── Tri journal ──
@@ -1265,13 +1327,15 @@ export class HistoryComponent implements OnInit {
 
   filtered = computed(() => {
     const fil = this.activeFilters();
+    const { start, end } = this.journalDateRange();
     let list = this.interventionSvc.filter({
-      dateDebut: fil.dateDebut || undefined,
-      dateFin: fil.dateFin || undefined,
+      dateDebut: start?.toISOString(),
+      dateFin: end?.toISOString(),
       technicienId: fil.technicienId || undefined,
       zone: fil.zone || undefined,
       type: fil.type || undefined,
       statut: fil.statut || undefined,
+      viaSignalement: fil.origine === 'signalement' ? true : undefined,
     });
 
     const field = this.sortField();
@@ -1291,6 +1355,22 @@ export class HistoryComponent implements OnInit {
   });
 
   countByStatut(s: string) { return this.filtered().filter(i => i.statut === s).length; }
+  countViaSignalement() { return this.filtered().filter(i => i.viaSignalement).length; }
+
+  pageSize  = signal(25);
+  pageIndex = signal(0);
+
+  pagedFiltered = computed(() => {
+    const all   = this.filtered();
+    const size  = this.pageSize();
+    const start = this.pageIndex() * size;
+    return start >= all.length ? all.slice(0, size) : all.slice(start, start + size);
+  });
+
+  onPage(e: PageEvent): void {
+    this.pageSize.set(e.pageSize);
+    this.pageIndex.set(e.pageIndex);
+  }
   avgDuration() {
     const with_d = this.filtered().filter(i => i.duree);
     if (!with_d.length) return 0;
@@ -1299,9 +1379,9 @@ export class HistoryComponent implements OnInit {
 
   // ── Missions internes (journal) ──
   missionCols = ['date', 'titre', 'type', 'technicien', 'confiepar', 'statut'];
-  mPickerDebut: Date | null = null;
-  mPickerFin: Date | null = null;
-  mf = { dateDebut: '', dateFin: '', technicienId: '', type: '', statut: '' };
+  missionsDateRange = signal<DateRangeValue>({ start: null, end: null });
+  onMissionsDateRangeChange(v: DateRangeValue): void { this.missionsDateRange.set(v); }
+  mf = { technicienId: '', type: '', statut: '' };
   private activeMissionFilters = signal({ ...this.mf });
   missionSortField = signal('date');
   missionSortDir   = signal<'asc' | 'desc'>('desc');
@@ -1318,9 +1398,12 @@ export class HistoryComponent implements OnInit {
 
   filteredMissions = computed(() => {
     const fil = this.activeMissionFilters();
+    const { start, end } = this.missionsDateRange();
+    const dateDebut = start ? this.toIso(start) : '';
+    const dateFin   = end ? this.toIso(end) : '';
     let list = this.missionSvc.getAll().filter(m => {
-      if (fil.dateDebut && m.dateMission < fil.dateDebut) return false;
-      if (fil.dateFin && m.dateMission > fil.dateFin) return false;
+      if (dateDebut && m.dateMission < dateDebut) return false;
+      if (dateFin && m.dateMission > dateFin) return false;
       if (fil.technicienId && m.assignedToId !== fil.technicienId && m.assignedToId2 !== fil.technicienId) return false;
       if (fil.type && m.type !== fil.type) return false;
       if (fil.statut && m.statut !== fil.statut) return false;
@@ -1344,15 +1427,12 @@ export class HistoryComponent implements OnInit {
   countMissionsByStatut(s: MissionStatut) { return this.filteredMissions().filter(m => m.statut === s).length; }
 
   applyMissionFilters() {
-    this.mf.dateDebut = this.toIso(this.mPickerDebut);
-    this.mf.dateFin   = this.toIso(this.mPickerFin);
     this.activeMissionFilters.set({ ...this.mf });
   }
 
   resetMissionFilters() {
-    this.mPickerDebut = null;
-    this.mPickerFin   = null;
-    this.mf = { dateDebut: '', dateFin: '', technicienId: '', type: '', statut: '' };
+    this.missionsDateRange.set({ start: null, end: null });
+    this.mf = { technicienId: '', type: '', statut: '' };
     this.activeMissionFilters.set({ ...this.mf });
   }
 
@@ -1407,6 +1487,8 @@ export class HistoryComponent implements OnInit {
   }
 
   // ── Réaffectations ──
+  // Signal (pas une simple propriété) : un computed() ne suit que les lectures
+  // de signaux comme dépendances, sinon il ne se réévalue jamais à la frappe.
   reassignSearch = signal('');
 
   reassignments = computed(() => this.interventionSvc.getReassignments());
@@ -1448,16 +1530,15 @@ export class HistoryComponent implements OnInit {
   }
 
   applyFilters() {
-    this.f.dateDebut = this.toIso(this.pickerDebut);
-    this.f.dateFin   = this.toIso(this.pickerFin);
     this.activeFilters.set({ ...this.f });
+    this.pageIndex.set(0);
   }
 
   resetFilters() {
-    this.pickerDebut = null;
-    this.pickerFin   = null;
-    this.f = { dateDebut: '', dateFin: '', technicienId: '', zone: '', type: '', statut: '' };
+    this.journalDateRange.set({ start: null, end: null });
+    this.f = { technicienId: '', zone: '', type: '', statut: '', origine: '' };
     this.activeFilters.set({ ...this.f });
+    this.pageIndex.set(0);
   }
 
   sClass(s: string) { return s === 'Terminée' ? 'terminee' : s === 'En cours' ? 'en-cours' : 'echec'; }
@@ -1491,12 +1572,17 @@ export class HistoryComponent implements OnInit {
     { key: 'technicienNom', label: 'Technicien' },
     { key: 'duree',         label: 'Durée (min)' },
     { key: 'statut',        label: 'Statut' },
+    { key: 'origineLabel',  label: 'Origine' },
     { key: 'description',   label: 'Description' },
     { key: 'observations',  label: 'Observations' },
   ];
 
+  private withOrigineLabel(i: Intervention): Intervention & { origineLabel: string } {
+    return { ...i, origineLabel: i.viaSignalement ? 'Signalement QR' : 'Manuelle' };
+  }
+
   exportCsv(): void {
-    const rows = this.filtered().map(i => ({ ...i, dateDebut: new Date(i.dateDebut).toLocaleString('fr-FR') }));
+    const rows = this.filtered().map(i => this.withOrigineLabel({ ...i, dateDebut: new Date(i.dateDebut).toLocaleString('fr-FR') }));
     this.exportSvc.exportCsv(rows as never, `interventions_${new Date().toISOString().split('T')[0]}`, this.EXPORT_COLS);
   }
 
@@ -1509,6 +1595,7 @@ export class HistoryComponent implements OnInit {
       { label: 'Réaffectations',   value: this.totalReassignments() },
       { label: 'Transports',       value: this.totalTransports() },
       { label: 'Moy./technicien',  value: this.avgInterventionsPerTech() },
+      { label: 'Via signalement QR', value: this.countViaSignalement() },
     ];
     this.exportSvc.exportMultiSectionPdf(
       `Rapport — ${this.periodLabel()}`,
@@ -1545,7 +1632,11 @@ export class HistoryComponent implements OnInit {
         {
           title: 'Journal des interventions',
           columns: this.EXPORT_COLS,
-          rows: this.filtered().map(i => ({ ...i, dateDebut: new Date(i.dateDebut).toLocaleString('fr-FR'), duree: i.duree ? `${i.duree} min` : '—' })) as unknown as Record<string, unknown>[],
+          rows: this.filtered().map(i => ({
+            ...this.withOrigineLabel(i),
+            dateDebut: new Date(i.dateDebut).toLocaleString('fr-FR'),
+            duree: i.duree ? `${i.duree} min` : '—',
+          })) as unknown as Record<string, unknown>[],
         },
       ]
     );

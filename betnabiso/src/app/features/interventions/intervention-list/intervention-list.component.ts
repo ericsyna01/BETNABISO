@@ -25,10 +25,10 @@ import { EvaluationService } from '../../../core/services/evaluation.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { User } from '../../../core/models/user.model';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { TextInputDialogComponent, TextInputDialogData } from '../../../core/components/text-input-dialog/text-input-dialog.component';
 import { StarRatingDialogComponent, StarRatingDialogData, StarRatingResult } from '../../../core/components/star-rating-dialog/star-rating-dialog.component';
 import { KanbanComponent } from '../kanban/kanban.component';
+import { DateRangeFilterComponent, DateRangeValue } from '../../../shared/components/date-range-filter/date-range-filter.component';
 
 @Component({
   selector: 'app-affecter-chauffeur-dialog',
@@ -131,8 +131,7 @@ export class DeplacementDialogComponent {
     MatTableModule, MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
     MatMenuModule, MatBadgeModule, MatDialogModule, MatCheckboxModule, MatPaginatorModule,
-    MatDatepickerModule,
-    KanbanComponent
+    KanbanComponent, DateRangeFilterComponent
   ],
   template: `
     <div class="page-container">
@@ -193,44 +192,47 @@ export class DeplacementDialogComponent {
       <!-- Filtres (liste only) -->
       @if (viewMode() === 'list') {
       <div class="search-bar">
-        <mat-form-field appearance="outline">
-          <mat-label>Rechercher</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Agent, description...">
-        </mat-form-field>
+        <div class="pill-field" style="flex:2 1 260px">
+          <label class="pill-label">Rechercher</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Agent, description...">
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:160px">
-          <mat-label>Type</mat-label>
-          <mat-select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
-            <mat-option value="">Tous</mat-option>
-            @for (t of types(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="flex:1 1 170px">
+          <label class="pill-label">Type</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>category</mat-icon>
+            <mat-select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
+              <mat-option value="">Tous</mat-option>
+              @for (t of types(); track t.id) { <mat-option [value]="t.label">{{ t.label }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:150px">
-          <mat-label>Statut</mat-label>
-          <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
-            <mat-option value="">Tous</mat-option>
-            <mat-option value="Assignée">Assignée</mat-option>
-            <mat-option value="En cours">En cours</mat-option>
-            <mat-option value="Terminée">Terminée</mat-option>
-            <mat-option value="Échec">Échec</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="flex:1 1 160px">
+          <label class="pill-label">Statut</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>flag</mat-icon>
+            <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
+              <mat-option value="">Tous</mat-option>
+              <mat-option value="Assignée">Assignée</mat-option>
+              <mat-option value="En cours">En cours</mat-option>
+              <mat-option value="Terminée">Terminée</mat-option>
+              <mat-option value="Échec">Échec</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:150px">
-          <mat-label>Du</mat-label>
-          <input matInput [matDatepicker]="pickerFrom" [ngModel]="filterDateFrom()" (ngModelChange)="filterDateFrom.set($event)" readonly>
-          <mat-datepicker-toggle matSuffix [for]="pickerFrom"></mat-datepicker-toggle>
-          <mat-datepicker #pickerFrom></mat-datepicker>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" style="width:150px">
-          <mat-label>Au</mat-label>
-          <input matInput [matDatepicker]="pickerTo" [ngModel]="filterDateTo()" (ngModelChange)="filterDateTo.set($event)" readonly>
-          <mat-datepicker-toggle matSuffix [for]="pickerTo"></mat-datepicker-toggle>
-          <mat-datepicker #pickerTo></mat-datepicker>
-        </mat-form-field>
+        <div class="pill-field" style="flex:1.3 1 230px">
+          <label class="pill-label">Période</label>
+          <app-date-range-filter
+            [value]="dateRange()"
+            (valueChange)="onDateRangeChange($event)"
+            placeholder="Toutes les dates">
+          </app-date-range-filter>
+        </div>
 
         @if (!auth.isTechnicien()) {
           <button mat-stroked-button
@@ -892,8 +894,7 @@ export class InterventionListComponent implements OnDestroy {
   filterType        = signal('');
   filterStatut      = signal('');
   filterDeplacement = signal(false);
-  filterDateFrom    = signal<Date | null>(null);
-  filterDateTo      = signal<Date | null>(null);
+  dateRange         = signal<DateRangeValue>({ start: null, end: null });
   sortCol           = signal<string>('dateDebut');
   sortDir           = signal<'asc' | 'desc'>('desc');
 
@@ -920,20 +921,17 @@ export class InterventionListComponent implements OnDestroy {
 
   hasFilter = computed(() =>
     !!this.searchQuery() || !!this.filterType() || !!this.filterStatut() || this.filterDeplacement() ||
-    !!this.filterDateFrom() || !!this.filterDateTo() || !!this.highlightId()
+    !!this.dateRange().start || !!this.dateRange().end || !!this.highlightId()
   );
 
-  private toISODate(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
+  onDateRangeChange(v: DateRangeValue): void { this.dateRange.set(v); }
 
   resetFilters(): void {
     this.searchQuery.set('');
     this.filterType.set('');
     this.filterStatut.set('');
     this.filterDeplacement.set(false);
-    this.filterDateFrom.set(null);
-    this.filterDateTo.set(null);
+    this.dateRange.set({ start: null, end: null });
     this.sortCol.set('dateDebut');
     this.sortDir.set('desc');
     this.highlightId.set(null);
@@ -966,10 +964,12 @@ export class InterventionListComponent implements OnDestroy {
     if (ft) items = items.filter(i => i.type === ft);
     const fs = this.filterStatut();
     if (fs) items = items.filter(i => i.statut === fs);
-    const from = this.filterDateFrom();
-    if (from) { const s = this.toISODate(from); items = items.filter(i => i.dateDebut >= s); }
-    const to = this.filterDateTo() ? this.toISODate(this.filterDateTo()!) : '';
-    if (to) items = items.filter(i => i.dateDebut <= to + 'T23:59:59');
+    const { start, end } = this.dateRange();
+    // Comparaison en timestamps (et non en chaînes) : le format ISO renvoyé par
+    // l'API (+00:00) et celui produit par Date.toISOString() (.000Z) ne sont
+    // pas directement comparables caractère par caractère.
+    if (start) { const t = start.getTime(); items = items.filter(i => new Date(i.dateDebut).getTime() >= t); }
+    if (end)   { const t = end.getTime();   items = items.filter(i => new Date(i.dateDebut).getTime() <= t); }
 
     const col = this.sortCol();
     const dir = this.sortDir() === 'asc' ? 1 : -1;

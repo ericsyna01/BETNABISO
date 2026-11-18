@@ -43,21 +43,26 @@ import { TypeLabel, TypeCategorie, TYPE_ICON_PRESETS } from '../../../core/model
         </mat-card-header>
         <mat-card-content>
           <div class="add-row">
-            <mat-form-field appearance="outline" class="label-input">
-              <mat-label>Nom du type</mat-label>
-              <input matInput [(ngModel)]="formLabel" placeholder="ex: Câblage réseau">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="icon-input">
-              <mat-label>Icône</mat-label>
-              <mat-select [(ngModel)]="formIcone">
-                @for (i of iconPresets; track i) {
-                  <mat-option [value]="i">
-                    <mat-icon style="vertical-align:middle;margin-right:6px">{{ i }}</mat-icon>{{ i }}
-                  </mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-icon class="icon-preview">{{ formIcone || 'help' }}</mat-icon>
+            <div class="pill-field label-input">
+              <label class="pill-label">Nom du type</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>label</mat-icon>
+                <input matInput [(ngModel)]="formLabel" placeholder="ex: Câblage réseau">
+              </mat-form-field>
+            </div>
+            <div class="pill-field icon-input">
+              <label class="pill-label">Icône</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>{{ formIcone || 'help' }}</mat-icon>
+                <mat-select [(ngModel)]="formIcone">
+                  @for (i of iconPresets; track i) {
+                    <mat-option [value]="i">
+                      <mat-icon style="vertical-align:middle;margin-right:6px">{{ i }}</mat-icon>{{ i }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
           </div>
           <div class="form-actions">
             @if (editId()) {
@@ -113,7 +118,43 @@ import { TypeLabel, TypeCategorie, TYPE_ICON_PRESETS } from '../../../core/model
   `,
   styles: [`
     .types-page { display: flex; flex-direction: column; gap: 20px; padding-top: 16px; }
-    .cat-toggle { align-self: flex-start; max-width: 100%; overflow-x: auto; }
+
+    :host ::ng-deep .cat-toggle.mat-button-toggle-group {
+      align-self: flex-start;
+      max-width: 100%;
+      overflow-x: auto;
+      display: inline-flex;
+      background: #f0f4f8;
+      border-radius: 10px;
+      padding: 4px;
+      gap: 4px;
+      border: none;
+      box-shadow: none;
+
+      .mat-button-toggle-appearance-standard {
+        border: none !important;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .mat-button-toggle-checkbox-wrapper { display: none; }
+
+      .mat-button-toggle-button { height: 38px; padding: 0 16px; }
+
+      .mat-button-toggle-label-content {
+        padding: 0; line-height: 38px; font-size: 13px; font-weight: 500; color: #5a6b7c;
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+      .mat-button-toggle:not(.mat-button-toggle-checked):hover .mat-button-toggle-button { background: rgba(0,0,0,.04); }
+
+      .mat-button-toggle-checked {
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        .mat-button-toggle-label-content { color: #1a3a5c; font-weight: 600; }
+      }
+    }
 
     .add-card mat-card-header { padding: 12px 16px 0 !important; }
     .add-card mat-card-content { padding: 12px 16px 16px !important; }
@@ -124,7 +165,6 @@ import { TypeLabel, TypeCategorie, TYPE_ICON_PRESETS } from '../../../core/model
     .add-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .label-input { flex: 2; min-width: 180px; }
     .icon-input { flex: 1; min-width: 160px; }
-    .icon-preview { font-size: 28px; width: 28px; height: 28px; color: var(--primary); }
 
     .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
 

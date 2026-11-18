@@ -177,37 +177,45 @@ export class ChangePwdDialogComponent {
 
       <!-- Filtres -->
       <div class="search-bar">
-        <mat-form-field appearance="outline">
-          <mat-label>Rechercher</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
-                 placeholder="Nom, username, email...">
-          @if (searchQuery()) {
-            <button matSuffix mat-icon-button (click)="searchQuery.set('')">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
+        <div class="pill-field" style="flex:2 1 260px">
+          <label class="pill-label">Rechercher</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+                   placeholder="Nom, username, email...">
+            @if (searchQuery()) {
+              <button matSuffix mat-icon-button (click)="searchQuery.set('')">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:160px">
-          <mat-label>Rôle</mat-label>
-          <mat-select [ngModel]="filterRole()" (ngModelChange)="filterRole.set($event)">
-            <mat-option value="">Tous</mat-option>
-            <mat-option value="admin">Admin</mat-option>
-            <mat-option value="support">Support</mat-option>
-            <mat-option value="chauffeur">Chauffeur</mat-option>
-            <mat-option value="technicien">Technicien</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="flex:1 1 170px">
+          <label class="pill-label">Rôle</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>badge</mat-icon>
+            <mat-select [ngModel]="filterRole()" (ngModelChange)="filterRole.set($event)">
+              <mat-option value="">Tous</mat-option>
+              <mat-option value="admin">Admin</mat-option>
+              <mat-option value="support">Support</mat-option>
+              <mat-option value="chauffeur">Chauffeur</mat-option>
+              <mat-option value="technicien">Technicien</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:140px">
-          <mat-label>Statut</mat-label>
-          <mat-select [ngModel]="filterActif()" (ngModelChange)="filterActif.set($event)">
-            <mat-option value="">Tous</mat-option>
-            <mat-option value="actif">Actif</mat-option>
-            <mat-option value="inactif">Inactif</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="flex:1 1 160px">
+          <label class="pill-label">Statut</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>flag</mat-icon>
+            <mat-select [ngModel]="filterActif()" (ngModelChange)="filterActif.set($event)">
+              <mat-option value="">Tous</mat-option>
+              <mat-option value="actif">Actif</mat-option>
+              <mat-option value="inactif">Inactif</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
         @if (hasFilter()) {
           <button mat-stroked-button (click)="resetFilters()" class="reset-btn">

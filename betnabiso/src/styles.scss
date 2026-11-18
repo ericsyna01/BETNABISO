@@ -734,3 +734,55 @@ html.dark-mode {
   font-size: 12.5px !important;
   line-height: 1.5 !important;
 }
+
+/* ── Filtres "pilule" — remplace le contour Material (bordure coupée par le
+   label) par le même style arrondi que app-date-range-filter, pour que tous
+   les filtres d'une même barre (dates, technicien, zone, type, statut...)
+   se ressemblent. Usage : <div class="pill-field"><label class="pill-label">
+   Technicien</label><mat-form-field appearance="outline" class="pill-select">
+   ...</mat-form-field></div> ────────────────────────────────────────────── */
+.pill-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pill-label {
+  font-size: 11px; font-weight: 600; color: #78909c;
+  letter-spacing: .2px; padding-left: 3px;
+}
+.pill-select.mat-mdc-form-field {
+  width: 100%;
+  /* Neutralise le `min-width:200px` que .search-bar mat-form-field impose par
+     ailleurs (utile pour les champs non convertis au style pilule) : avec un
+     .pill-field plus étroit que 200px, ce plancher faisait déborder le champ
+     réel hors de son conteneur sans que la mesure du conteneur extérieur ne
+     le révèle. */
+  min-width: 0;
+  .mat-mdc-text-field-wrapper { height: 44px; padding: 0; }
+  .mat-mdc-form-field-flex {
+    height: 44px; align-items: center;
+    border: 1.5px solid #dde3ec; border-radius: 10px;
+    background: #f8fafc; padding: 0 12px;
+    transition: border-color .2s, background .2s;
+  }
+  .mdc-notched-outline { display: none; }
+  .mdc-floating-label { display: none; }
+  .mat-mdc-form-field-infix {
+    padding: 0 !important; min-height: 0; border-top: 0;
+    display: flex; align-items: center;
+  }
+  .mat-mdc-form-field-subscript-wrapper { display: none; }
+  .mat-mdc-select-value, .mat-mdc-select-placeholder { font-size: 13px; color: #1a2742; }
+  .mat-mdc-select-arrow-wrapper { transform: none; }
+  &.mat-focused .mat-mdc-form-field-flex { border-color: #2a5fa0; background: white; }
+  &:hover .mat-mdc-form-field-flex { border-color: #b8c4d4; }
+  /* Champ texte (matInput) avec icône préfixe, ex. le champ "Rechercher".
+     Material applique par défaut `padding: 0 12px` sur mat-icon pensé pour
+     son propre contour notché — ça gonflait l'icône à 43px de large et
+     collait le texte juste derrière sans espace, donnant un effet de
+     chevauchement sur les colonnes larges. On neutralise ce padding. */
+  .mat-mdc-form-field-icon-prefix {
+    color: #94a3b8; display: flex; align-items: center; width: auto; height: auto;
+    padding: 0 10px 0 0;
+    .mat-icon { font-size: 19px; width: 19px; height: 19px; padding: 0; margin: 0; }
+  }
+  input.mat-mdc-input-element { font-size: 13px; color: #1a2742; margin: 0;
+    &::placeholder { color: #b0bec5; }
+  }
+}

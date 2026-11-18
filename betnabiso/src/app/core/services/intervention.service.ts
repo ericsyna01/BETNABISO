@@ -184,15 +184,19 @@ export class InterventionService {
 
   filter(opts: {
     dateDebut?: string; dateFin?: string; technicienId?: string;
-    zone?: string; type?: string; statut?: string;
+    zone?: string; type?: string; statut?: string; viaSignalement?: boolean;
   }): Intervention[] {
     return this._data().filter(i => {
-      if (opts.dateDebut  && i.dateDebut < opts.dateDebut)               return false;
-      if (opts.dateFin    && i.dateDebut > opts.dateFin + 'T23:59:59')   return false;
+      // Comparaison en timestamps : dateDebut/dateFin sont maintenant des instants
+      // ISO précis (avec heure) fournis par l'appelant, pas de simples dates —
+      // une comparaison de chaînes mélangerait des formats ISO non homogènes.
+      if (opts.dateDebut && new Date(i.dateDebut).getTime() < new Date(opts.dateDebut).getTime()) return false;
+      if (opts.dateFin   && new Date(i.dateDebut).getTime() > new Date(opts.dateFin).getTime())   return false;
       if (opts.technicienId && i.technicienId !== opts.technicienId)     return false;
       if (opts.zone       && i.agentZone !== opts.zone)                  return false;
       if (opts.type       && i.type !== opts.type)                       return false;
       if (opts.statut     && i.statut !== opts.statut)                   return false;
+      if (opts.viaSignalement && !i.viaSignalement)                      return false;
       return true;
     });
   }

@@ -48,7 +48,10 @@ interface SearchResult {
             (ngModelChange)="searchQuery.set($event)"
             (focus)="searchOpen.set(true)"
             (input)="searchOpen.set(true)"
-            autocomplete="off">
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false">
           @if (searchQuery()) {
             <button class="search-clear" mat-icon-button (click)="clearSearch()">
               <mat-icon>close</mat-icon>

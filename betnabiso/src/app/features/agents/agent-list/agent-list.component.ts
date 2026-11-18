@@ -184,38 +184,46 @@ export class RedeploiementDialogComponent {
 
       <!-- Filtres -->
       <div class="search-bar">
-        <mat-form-field appearance="outline">
-          <mat-label>Rechercher</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
-                 placeholder="Nom, identifiant, AnyDesk...">
-          @if (searchQuery()) {
-            <button matSuffix mat-icon-button (click)="searchQuery.set('')">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" style="width:180px">
-          <mat-label>Zone</mat-label>
-          <mat-select [ngModel]="filterZone()" (ngModelChange)="filterZone.set($event)">
-            <mat-option value="">Toutes les zones</mat-option>
-            @for (z of zones(); track z) {
-              <mat-option [value]="z">{{ z }}</mat-option>
+        <div class="pill-field" style="flex:2 1 260px">
+          <label class="pill-label">Rechercher</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+                   placeholder="Nom, identifiant, AnyDesk...">
+            @if (searchQuery()) {
+              <button matSuffix mat-icon-button (click)="searchQuery.set('')">
+                <mat-icon>close</mat-icon>
+              </button>
             }
-          </mat-select>
-        </mat-form-field>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:160px">
-          <mat-label>Statut</mat-label>
-          <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
-            <mat-option value="">Tous</mat-option>
-            <mat-option value="Actif">Actif</mat-option>
-            <mat-option value="Inactif">Inactif</mat-option>
-            <mat-option value="Redéployé">Redéployé</mat-option>
-            <mat-option value="À redéployer">À redéployer</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="flex:1 1 180px">
+          <label class="pill-label">Zone</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>place</mat-icon>
+            <mat-select [ngModel]="filterZone()" (ngModelChange)="filterZone.set($event)">
+              <mat-option value="">Toutes les zones</mat-option>
+              @for (z of zones(); track z) {
+                <mat-option [value]="z">{{ z }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="pill-field" style="flex:1 1 160px">
+          <label class="pill-label">Statut</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>flag</mat-icon>
+            <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
+              <mat-option value="">Tous</mat-option>
+              <mat-option value="Actif">Actif</mat-option>
+              <mat-option value="Inactif">Inactif</mat-option>
+              <mat-option value="Redéployé">Redéployé</mat-option>
+              <mat-option value="À redéployer">À redéployer</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
         @if (filterMachine()) {
           <span class="machine-filter-chip" [class.machine-filter-chip-warn]="filterMachine() === 'duplicate'">
@@ -714,7 +722,8 @@ export class AgentListComponent implements OnInit, OnDestroy {
   longOfflineCount = computed(() => {
     const statuses = this.allStatuses();
     return this.allAgents().filter(a =>
-      isLongOffline(statuses[a.id]?.caisse) || isLongOffline(statuses[a.id]?.serveur)
+      a.statut !== 'Redéployé' && a.statut !== 'Inactif' &&
+      (isLongOffline(statuses[a.id]?.caisse) || isLongOffline(statuses[a.id]?.serveur))
     ).length;
   });
 
@@ -799,7 +808,8 @@ export class AgentListComponent implements OnInit, OnDestroy {
       isLongOnline(this.allStatuses()[a.id]?.caisse) || isLongOnline(this.allStatuses()[a.id]?.serveur)
     );
     if (fm === 'long-offline') agents = agents.filter(a =>
-      isLongOffline(this.allStatuses()[a.id]?.caisse) || isLongOffline(this.allStatuses()[a.id]?.serveur)
+      a.statut !== 'Redéployé' && a.statut !== 'Inactif' &&
+      (isLongOffline(this.allStatuses()[a.id]?.caisse) || isLongOffline(this.allStatuses()[a.id]?.serveur))
     );
 
     const col = this.sortCol();

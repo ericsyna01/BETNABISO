@@ -32,18 +32,27 @@ import { Creneau, CRENEAU_PALETTE } from '../../../core/models/creneau.model';
         </mat-card-header>
         <mat-card-content>
           <div class="add-row">
-            <mat-form-field appearance="outline" class="label-input">
-              <mat-label>Nom du créneau</mat-label>
-              <input matInput [(ngModel)]="formLabel" placeholder="ex: Nuit">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="time-input">
-              <mat-label>Début</mat-label>
-              <input matInput type="time" [(ngModel)]="formDebut">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="time-input">
-              <mat-label>Fin</mat-label>
-              <input matInput type="time" [(ngModel)]="formFin">
-            </mat-form-field>
+            <div class="pill-field label-input">
+              <label class="pill-label">Nom du créneau</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>label</mat-icon>
+                <input matInput [(ngModel)]="formLabel" placeholder="ex: Nuit">
+              </mat-form-field>
+            </div>
+            <div class="pill-field time-input">
+              <label class="pill-label">Début</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>schedule</mat-icon>
+                <input matInput type="time" [(ngModel)]="formDebut">
+              </mat-form-field>
+            </div>
+            <div class="pill-field time-input">
+              <label class="pill-label">Fin</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>schedule</mat-icon>
+                <input matInput type="time" [(ngModel)]="formFin">
+              </mat-form-field>
+            </div>
           </div>
           <div class="palette-row">
             <span class="palette-label">Couleur</span>

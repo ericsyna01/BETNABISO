@@ -92,30 +92,38 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
         <div class="main-col">
           <!-- Filtres -->
           <div class="search-bar">
-            <mat-form-field appearance="outline">
-              <mat-label>Rechercher</mat-label>
-              <mat-icon matPrefix>search</mat-icon>
-              <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Agent, technicien...">
-            </mat-form-field>
-            <mat-form-field appearance="outline" style="width:160px">
-              <mat-label>Technicien</mat-label>
-              <mat-select [ngModel]="filterTech()" (ngModelChange)="filterTech.set($event)">
-                <mat-option value="">Tous</mat-option>
-                @for (t of techniciens(); track t.id) {
-                  <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" style="width:150px">
-              <mat-label>Statut</mat-label>
-              <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
-                <mat-option value="">Tous</mat-option>
-                <mat-option value="Assignée">Assignée</mat-option>
-                <mat-option value="En cours">En cours</mat-option>
-                <mat-option value="Terminée">Terminée</mat-option>
-                <mat-option value="Échec">Échec</mat-option>
-              </mat-select>
-            </mat-form-field>
+            <div class="pill-field" style="flex:2 1 260px">
+              <label class="pill-label">Rechercher</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>search</mat-icon>
+                <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Agent, technicien...">
+              </mat-form-field>
+            </div>
+            <div class="pill-field" style="flex:1 1 170px">
+              <label class="pill-label">Technicien</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>engineering</mat-icon>
+                <mat-select [ngModel]="filterTech()" (ngModelChange)="filterTech.set($event)">
+                  <mat-option value="">Tous</mat-option>
+                  @for (t of techniciens(); track t.id) {
+                    <mat-option [value]="t.id">{{ t.prenom }} {{ t.nom }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <div class="pill-field" style="flex:1 1 160px">
+              <label class="pill-label">Statut</label>
+              <mat-form-field appearance="outline" class="pill-select">
+                <mat-icon matPrefix>flag</mat-icon>
+                <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
+                  <mat-option value="">Tous</mat-option>
+                  <mat-option value="Assignée">Assignée</mat-option>
+                  <mat-option value="En cours">En cours</mat-option>
+                  <mat-option value="Terminée">Terminée</mat-option>
+                  <mat-option value="Échec">Échec</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
             <span class="result-count">{{ filtered().length }} résultat(s)</span>
           </div>
 
