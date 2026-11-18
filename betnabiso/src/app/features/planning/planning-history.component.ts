@@ -53,42 +53,53 @@ interface WeekGroup {
       </div>
 
       <div class="filters-bar">
-        <mat-form-field appearance="outline">
-          <mat-label>Rechercher un technicien</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom...">
-        </mat-form-field>
+        <div class="pill-field" style="flex:2 1 220px">
+          <label class="pill-label">Rechercher un technicien</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom...">
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:200px">
-          <mat-label>Technicien</mat-label>
-          <mat-select [ngModel]="filterUserId()" (ngModelChange)="filterUserId.set($event)">
-            <mat-option value="">Tous</mat-option>
-            @for (u of users(); track u.id) {
-              <mat-option [value]="u.id">{{ u.prenom }} {{ u.nom }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="width:200px">
+          <label class="pill-label">Technicien</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>engineering</mat-icon>
+            <mat-select [ngModel]="filterUserId()" (ngModelChange)="filterUserId.set($event)">
+              <mat-option value="">Tous</mat-option>
+              @for (u of users(); track u.id) {
+                <mat-option [value]="u.id">{{ u.prenom }} {{ u.nom }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:170px">
-          <mat-label>Créneau</mat-label>
-          <mat-select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
-            <mat-option value="">Tous</mat-option>
-            @for (c of creneaux(); track c.id) {
-              <mat-option [value]="c.label">{{ c.label }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="width:170px">
+          <label class="pill-label">Créneau</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>schedule</mat-icon>
+            <mat-select [ngModel]="filterType()" (ngModelChange)="filterType.set($event)">
+              <mat-option value="">Tous</mat-option>
+              @for (c of creneaux(); track c.id) {
+                <mat-option [value]="c.label">{{ c.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline" style="width:170px">
-          <mat-label>Période</mat-label>
-          <mat-select [ngModel]="periodWeeks()" (ngModelChange)="periodWeeks.set($event)">
-            <mat-option [value]="4">4 dernières semaines</mat-option>
-            <mat-option [value]="8">8 dernières semaines</mat-option>
-            <mat-option [value]="12">12 dernières semaines</mat-option>
-            <mat-option [value]="26">6 derniers mois</mat-option>
-            <mat-option [value]="0">Tout l'historique</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="pill-field" style="width:170px">
+          <label class="pill-label">Période</label>
+          <mat-form-field appearance="outline" class="pill-select">
+            <mat-icon matPrefix>date_range</mat-icon>
+            <mat-select [ngModel]="periodWeeks()" (ngModelChange)="periodWeeks.set($event)">
+              <mat-option [value]="4">4 dernières semaines</mat-option>
+              <mat-option [value]="8">8 dernières semaines</mat-option>
+              <mat-option [value]="12">12 dernières semaines</mat-option>
+              <mat-option [value]="26">6 derniers mois</mat-option>
+              <mat-option [value]="0">Tout l'historique</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
         <span class="result-count">{{ totalEntries() }} affectation(s) · {{ weekGroups().length }} semaine(s)</span>
       </div>

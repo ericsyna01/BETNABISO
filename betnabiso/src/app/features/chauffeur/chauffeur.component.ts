@@ -83,21 +83,26 @@ import { ConfirmService } from '../../core/services/confirm.service';
 
   <!-- ─── Filtres ──────────────────────────────────────────── -->
   <div class="filters-bar">
-    <mat-form-field appearance="outline">
-      <mat-label>Rechercher</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Agent, zone, technicien...">
-    </mat-form-field>
-    <mat-form-field appearance="outline" style="width:160px">
-      <mat-label>Statut</mat-label>
-      <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
-        <mat-option value="">Tous</mat-option>
-        <mat-option value="Assignée">Assignée</mat-option>
-        <mat-option value="En cours">En cours</mat-option>
-        <mat-option value="Terminée">Terminée</mat-option>
-        <mat-option value="Échec">Échec</mat-option>
-      </mat-select>
-    </mat-form-field>
+    <div class="pill-field" style="flex:2 1 220px">
+      <label class="pill-label">Rechercher</label>
+      <mat-form-field appearance="outline" class="pill-select">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Agent, zone, technicien...">
+      </mat-form-field>
+    </div>
+    <div class="pill-field" style="width:160px">
+      <label class="pill-label">Statut</label>
+      <mat-form-field appearance="outline" class="pill-select">
+        <mat-icon matPrefix>flag</mat-icon>
+        <mat-select [ngModel]="filterStatut()" (ngModelChange)="filterStatut.set($event)">
+          <mat-option value="">Tous</mat-option>
+          <mat-option value="Assignée">Assignée</mat-option>
+          <mat-option value="En cours">En cours</mat-option>
+          <mat-option value="Terminée">Terminée</mat-option>
+          <mat-option value="Échec">Échec</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
     <span class="result-count">{{ filtered().length }} mission(s)</span>
   </div>
 
