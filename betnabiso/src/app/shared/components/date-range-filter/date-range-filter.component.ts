@@ -66,7 +66,7 @@ function pad(n: number): string { return n.toString().padStart(2, '0'); }
 
       @if (open()) {
         <div class="drf-panel" #panelRef (click)="$event.stopPropagation()"
-             [style.left.px]="panelOffsetX()">
+             [style.left.px]="panelOffsetX() || null">
 
           <div class="drf-presets">
             @for (p of presets; track p.key) {
@@ -272,7 +272,14 @@ function pad(n: number): string { return n.toString().padStart(2, '0'); }
     .drf-btn-primary { background: #1a3a5c; color: white; &:hover { background: #142e49; } }
 
     @media (max-width: 640px) {
-      .drf-panel { position: fixed; left: 8px; right: 8px; top: auto; flex-direction: column; max-height: 88vh; overflow-y: auto; }
+      /* "top: auto" seul (sans "bottom") force un repositionnement fixed via
+         l'algorithme de position statique, qui se base sur la position du
+         panneau dans le flux du document — donc sur le scroll de la page au
+         moment de l'ouverture — plutôt que sur le viewport. Résultat : le
+         panneau pouvait apparaître flottant n'importe où sur un long listing
+         scrollé, au lieu d'être ancré en bas d'écran. "bottom" fixe ancre le
+         panneau au viewport, indépendamment du scroll. */
+      .drf-panel { position: fixed; left: 8px; right: 8px; top: auto; bottom: 12px; flex-direction: column; max-height: 85vh; overflow-y: auto; }
       .drf-presets { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid #eef1f6; }
       .drf-body { min-width: 0; }
       .drf-calendars { flex-direction: column; }
