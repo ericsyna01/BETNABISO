@@ -45,14 +45,17 @@ type Period = 'month' | 'trimestre' | 'all';
           <span class="sub-title">Journal des interventions · Analyse de productivité</span>
         </div>
         <div class="header-actions">
-          <mat-form-field appearance="outline" style="width:190px">
-            <mat-label>Période (synthèse)</mat-label>
-            <mat-select [ngModel]="period()" (ngModelChange)="period.set($event)">
-              <mat-option value="month">30 derniers jours</mat-option>
-              <mat-option value="trimestre">3 derniers mois</mat-option>
-              <mat-option value="all">Tout</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <div class="pill-field" style="width:200px">
+            <label class="pill-label">Période (synthèse)</label>
+            <mat-form-field appearance="outline" class="pill-select">
+              <mat-icon matPrefix>date_range</mat-icon>
+              <mat-select [ngModel]="period()" (ngModelChange)="period.set($event)">
+                <mat-option value="month">30 derniers jours</mat-option>
+                <mat-option value="trimestre">3 derniers mois</mat-option>
+                <mat-option value="all">Tout</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
           <button mat-stroked-button (click)="exportCsv()">
             <mat-icon>table_view</mat-icon> CSV
           </button>
