@@ -23,6 +23,7 @@ import { ZoneService } from '../../core/services/zone.service';
 import { ExportService } from '../../core/services/export.service';
 import { TypeLabelService } from '../../core/services/type-label.service';
 import { DateRangeFilterComponent, DateRangeValue } from '../../shared/components/date-range-filter/date-range-filter.component';
+import { AttentesReportComponent } from './attentes-report.component';
 
 type Period = 'all' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear';
 
@@ -64,7 +65,7 @@ function periodRange(p: Period): { start: Date; end: Date } | null {
     FormsModule, DatePipe, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatTableModule, MatDividerModule, MatTooltipModule,
-    MatChipsModule, MatTabsModule, MatPaginatorModule, DateRangeFilterComponent
+    MatChipsModule, MatTabsModule, MatPaginatorModule, DateRangeFilterComponent, AttentesReportComponent
   ],
   template: `
     <div class="page-container">
@@ -981,6 +982,12 @@ function periodRange(p: Period): { start: Date; end: Date } | null {
             </mat-card>
 
           </div>
+        </mat-tab>
+
+        <mat-tab label="Attentes">
+          <ng-template matTabContent>
+            <app-attentes-report></app-attentes-report>
+          </ng-template>
         </mat-tab>
 
       </mat-tab-group>

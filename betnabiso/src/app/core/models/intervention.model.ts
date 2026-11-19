@@ -56,7 +56,7 @@ export const ATTENTE_MOTIFS: { value: AttenteMotif; label: string; short: string
   { value: 'materiel', label: 'En attente de matériel / pièce', short: 'Attente matériel', icon: 'inventory_2' },
   { value: 'reseau',   label: 'Réseau ou électricité coupé',     short: 'Réseau / courant', icon: 'signal_wifi_off' },
   { value: 'tiers',    label: "En attente d'un tiers",           short: 'Attente tiers',    icon: 'support_agent' },
-  { value: 'autre',    label: 'Autre raison',                    short: 'En attente',       icon: 'more_horiz' },
+  { value: 'autre',    label: 'Autre raison',                    short: 'Autre motif',      icon: 'more_horiz' },
 ];
 
 export interface InterventionSuivi {
@@ -67,6 +67,17 @@ export interface InterventionSuivi {
   motif: AttenteMotif | null;
   note: string | null;
   createdAt: string;
+}
+
+/** Ligne du journal global des attentes (tous les mini-rapports + reprises). */
+export interface AttenteJournalEntry extends InterventionSuivi {
+  interventionId: string;
+  agentNom: string | null;
+  agentZone: string | null;
+  technicienId: string;
+  technicienNom: string | null;
+  statut: InterventionStatut;
+  dateFin: string | null;
 }
 
 /** Au-delà de ce délai sans nouveau mini-rapport, l'attente est signalée comme à relancer. */

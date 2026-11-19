@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AttenteMotif, Intervention, InterventionSuivi, ReassignmentLog, TechMonthlyStats } from '../models/intervention.model';
+import { AttenteJournalEntry, AttenteMotif, Intervention, InterventionSuivi, ReassignmentLog, TechMonthlyStats } from '../models/intervention.model';
 import { AuthService } from './auth.service';
 import { SseService } from './sse.service';
 import { environment } from '../../../environments/environment';
@@ -250,6 +250,10 @@ export class InterventionService {
 
   getSuivis(id: string): Promise<InterventionSuivi[]> {
     return firstValueFrom(this.http.get<InterventionSuivi[]>(`${API}/${id}?action=suivis`));
+  }
+
+  getAttentesJournal(): Promise<AttenteJournalEntry[]> {
+    return firstValueFrom(this.http.get<AttenteJournalEntry[]>(`${API}?action=attentes`));
   }
 
   async update(id: string, data: Partial<Intervention>): Promise<Intervention | null> {

@@ -218,6 +218,44 @@ if ($m === 'GET') {
         }, $stmt->fetchAll()));
     }
 
+    // Journal global des mini-rapports d'attente (onglet « Attentes » du
+    // Rapport) : chaque ligne est un mini-rapport ou une reprise, avec les
+    // infos de l'intervention pour analyser l'évolution des motifs.
+    if ($action === 'attentes') {
+        requireRole(['superadmin', 'admin', 'support'], $current);
+        $where = []; $vals = [];
+        if ($current['role'] === 'admin' && !empty($current['zone'])) {
+            $where[] = 'LOWER(i."agentZone") = LOWER(?)'; $vals[] = $current['zone'];
+        }
+        if ($df = param('dateDebut')) { $where[] = 's."createdAt" >= ?'; $vals[] = $df; }
+        if ($dt = param('dateFin'))   { $where[] = 's."createdAt" <= ?'; $vals[] = $dt; }
+        $s = $db->prepare(
+            'SELECT s.id, s."interventionId", s."auteurNom", s.type, s.motif, s.note, s."createdAt",
+                    i."agentNom", i."agentZone", i."technicienId", i."technicienNom", i.statut, i."dateFin"
+             FROM intervention_suivis s
+             JOIN interventions i ON i.id = s."interventionId"'
+            . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+            . ' ORDER BY s."createdAt" DESC'
+        );
+        $s->execute($vals);
+        $pick = fn(array $r, string $k) => $r[strtolower($k)] ?? $r[$k] ?? null;
+        respond(200, array_map(fn($r) => [
+            'id'             => trim($r['id']),
+            'interventionId' => trim((string)$pick($r, 'interventionId')),
+            'auteurNom'      => $pick($r, 'auteurNom'),
+            'type'           => $r['type'],
+            'motif'          => $r['motif'] ?: null,
+            'note'           => $r['note'] ?: null,
+            'createdAt'      => date('c', strtotime($pick($r, 'createdAt'))),
+            'agentNom'       => $pick($r, 'agentNom'),
+            'agentZone'      => $pick($r, 'agentZone'),
+            'technicienId'   => trim((string)$pick($r, 'technicienId')),
+            'technicienNom'  => $pick($r, 'technicienNom'),
+            'statut'         => $r['statut'],
+            'dateFin'        => ($d = $pick($r, 'dateFin')) ? date('c', strtotime($d)) : null,
+        ], $s->fetchAll()));
+    }
+
     if ($action === 'stats') {
         $rows = $db->query(
             "SELECT statut, COUNT(*) as cnt FROM interventions GROUP BY statut"
