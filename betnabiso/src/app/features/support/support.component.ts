@@ -615,8 +615,12 @@ export class SupportComponent {
   search       = signal('');
   filterTech   = signal('');
   filterStatut = signal('');
-  sortCol      = signal('priorite');
-  sortDir      = signal<'asc'|'desc'>('asc');
+  // Sur mobile les cartes n'ont pas d'en-têtes de colonnes pour changer le
+  // tri : on y affiche directement les plus récentes en tête plutôt que le
+  // tri par priorité du tableau desktop.
+  private isMobile = window.matchMedia('(max-width: 640px)').matches;
+  sortCol      = signal(this.isMobile ? 'date' : 'priorite');
+  sortDir      = signal<'asc'|'desc'>(this.isMobile ? 'desc' : 'asc');
 
   canValidate = computed(() => ['superadmin', 'admin'].includes(this.auth.role() ?? ''));
 
