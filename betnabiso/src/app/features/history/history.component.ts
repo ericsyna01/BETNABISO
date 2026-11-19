@@ -24,7 +24,38 @@ import { ExportService } from '../../core/services/export.service';
 import { TypeLabelService } from '../../core/services/type-label.service';
 import { DateRangeFilterComponent, DateRangeValue } from '../../shared/components/date-range-filter/date-range-filter.component';
 
-type Period = 'month' | 'trimestre' | 'all';
+type Period = 'all' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear';
+
+const PERIOD_OPTIONS: { value: Period; label: string }[] = [
+  { value: 'all',       label: 'Toutes les dates' },
+  { value: 'today',     label: "Aujourd'hui" },
+  { value: 'yesterday', label: 'Hier' },
+  { value: 'thisWeek',  label: 'Cette semaine' },
+  { value: 'lastWeek',  label: 'Semaine dernière' },
+  { value: 'thisMonth', label: 'Ce mois-ci' },
+  { value: 'lastMonth', label: 'Mois dernier' },
+  { value: 'thisYear',  label: 'Cette année' },
+  { value: 'lastYear',  label: 'Année dernière' },
+];
+
+function periodRange(p: Period): { start: Date; end: Date } | null {
+  const now = new Date();
+  const day = (y: number, m: number, d: number) => new Date(y, m, d);
+  const endOf = (d: Date) => { const r = new Date(d); r.setHours(23, 59, 59, 999); return r; };
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const mondayOffset = (now.getDay() + 6) % 7;
+  switch (p) {
+    case 'today':     return { start: day(y, m, d),     end: endOf(day(y, m, d)) };
+    case 'yesterday': return { start: day(y, m, d - 1), end: endOf(day(y, m, d - 1)) };
+    case 'thisWeek':  return { start: day(y, m, d - mondayOffset),     end: endOf(day(y, m, d - mondayOffset + 6)) };
+    case 'lastWeek':  return { start: day(y, m, d - mondayOffset - 7), end: endOf(day(y, m, d - mondayOffset - 1)) };
+    case 'thisMonth': return { start: day(y, m, 1),     end: endOf(day(y, m + 1, 0)) };
+    case 'lastMonth': return { start: day(y, m - 1, 1), end: endOf(day(y, m, 0)) };
+    case 'thisYear':  return { start: day(y, 0, 1),     end: endOf(day(y, 11, 31)) };
+    case 'lastYear':  return { start: day(y - 1, 0, 1), end: endOf(day(y - 1, 11, 31)) };
+    default:          return null;
+  }
+}
 
 @Component({
   selector: 'app-history',
@@ -50,9 +81,9 @@ type Period = 'month' | 'trimestre' | 'all';
             <mat-form-field appearance="outline" class="pill-select">
               <mat-icon matPrefix>date_range</mat-icon>
               <mat-select [ngModel]="period()" (ngModelChange)="period.set($event)">
-                <mat-option value="month">30 derniers jours</mat-option>
-                <mat-option value="trimestre">3 derniers mois</mat-option>
-                <mat-option value="all">Tout</mat-option>
+                @for (o of periodOptions; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
@@ -1191,31 +1222,29 @@ export class HistoryComponent implements OnInit {
   chauffeurCols = ['nom', 'transports', 'zones', 'techs'];
 
   // ── Période (pour KPI + synthèse) ──
-  period = signal<Period>('month');
+  periodOptions = PERIOD_OPTIONS;
+  period = signal<Period>('thisMonth');
 
-  periodLabel = computed(() => {
-    const p = this.period();
-    if (p === 'month') return '30 derniers jours';
-    if (p === 'trimestre') return '3 derniers mois';
-    return 'Toutes périodes';
-  });
+  periodLabel = computed(() =>
+    PERIOD_OPTIONS.find(o => o.value === this.period())?.label ?? 'Toutes les dates'
+  );
+
+  private synthRange = computed(() => periodRange(this.period()));
+
+  private inRange(dateStr: string, r: { start: Date; end: Date } | null): boolean {
+    if (!r) return true;
+    const t = new Date(dateStr).getTime();
+    return t >= r.start.getTime() && t <= r.end.getTime();
+  }
 
   private periodFiltered = computed(() => {
-    const all = this.interventionSvc.getAllRaw();
-    const p = this.period();
-    if (p === 'all') return all;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - (p === 'month' ? 30 : 90));
-    return all.filter(i => new Date(i.dateDebut) >= cutoff);
+    const r = this.synthRange();
+    return this.interventionSvc.getAllRaw().filter(i => this.inRange(i.dateDebut, r));
   });
 
   private periodFilteredMissions = computed(() => {
-    const all = this.missionSvc.getAll();
-    const p = this.period();
-    if (p === 'all') return all;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - (p === 'month' ? 30 : 90));
-    return all.filter(m => new Date(m.dateMission) >= cutoff);
+    const r = this.synthRange();
+    return this.missionSvc.getAll().filter(m => this.inRange(m.dateMission, r));
   });
 
   // ── KPI ──
