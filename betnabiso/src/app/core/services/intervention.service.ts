@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Intervention, ReassignmentLog, TechMonthlyStats } from '../models/intervention.model';
+import { AttenteMotif, Intervention, InterventionSuivi, ReassignmentLog, TechMonthlyStats } from '../models/intervention.model';
 import { AuthService } from './auth.service';
 import { SseService } from './sse.service';
 import { environment } from '../../../environments/environment';
@@ -230,6 +230,26 @@ export class InterventionService {
       this.saveLocal(this._data().map(i => i.id === id ? interv : i));
       return interv;
     } catch { return null; }
+  }
+
+  async mettreEnAttente(id: string, motif: AttenteMotif, note: string): Promise<Intervention> {
+    const interv = await firstValueFrom(
+      this.http.post<Intervention>(`${API}/${id}?action=attente`, { motif, note })
+    );
+    this.saveLocal(this._data().map(i => i.id === id ? interv : i));
+    return interv;
+  }
+
+  async reprendre(id: string, note?: string): Promise<Intervention> {
+    const interv = await firstValueFrom(
+      this.http.post<Intervention>(`${API}/${id}?action=reprendre`, { note: note ?? '' })
+    );
+    this.saveLocal(this._data().map(i => i.id === id ? interv : i));
+    return interv;
+  }
+
+  getSuivis(id: string): Promise<InterventionSuivi[]> {
+    return firstValueFrom(this.http.get<InterventionSuivi[]>(`${API}/${id}?action=suivis`));
   }
 
   async update(id: string, data: Partial<Intervention>): Promise<Intervention | null> {

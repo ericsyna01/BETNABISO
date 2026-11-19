@@ -29,6 +29,7 @@ import { TextInputDialogComponent, TextInputDialogData } from '../../../core/com
 import { StarRatingDialogComponent, StarRatingDialogData, StarRatingResult } from '../../../core/components/star-rating-dialog/star-rating-dialog.component';
 import { KanbanComponent } from '../kanban/kanban.component';
 import { DateRangeFilterComponent, DateRangeValue } from '../../../shared/components/date-range-filter/date-range-filter.component';
+import { AttenteBadgeComponent, AttenteFlowService, attenteARelancer } from '../../../shared/components/attente/attente';
 
 @Component({
   selector: 'app-affecter-chauffeur-dialog',
@@ -131,7 +132,7 @@ export class DeplacementDialogComponent {
     MatTableModule, MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
     MatMenuModule, MatBadgeModule, MatDialogModule, MatCheckboxModule, MatPaginatorModule,
-    KanbanComponent, DateRangeFilterComponent
+    KanbanComponent, DateRangeFilterComponent, AttenteBadgeComponent
   ],
   template: `
     <div class="page-container">
@@ -142,6 +143,12 @@ export class DeplacementDialogComponent {
             <p class="pending-notice">
               <mat-icon>notifications_active</mat-icon>
               {{ pendingCount() }} intervention(s) vous ont été assignée(s) et attendent votre prise en charge
+            </p>
+          }
+          @if (mesAttentesARelancer() > 0) {
+            <p class="attente-notice">
+              <mat-icon>notification_important</mat-icon>
+              {{ mesAttentesARelancer() }} intervention(s) en attente depuis plus de 24h sans mini-rapport : ajoutez un point de situation
             </p>
           }
           @if (!auth.isTechnicien() && deplacementCount() > 0) {
@@ -219,6 +226,7 @@ export class DeplacementDialogComponent {
               <mat-option value="">Tous</mat-option>
               <mat-option value="Assignée">Assignée</mat-option>
               <mat-option value="En cours">En cours</mat-option>
+              <mat-option value="En attente">En cours · en attente</mat-option>
               <mat-option value="Terminée">Terminée</mat-option>
               <mat-option value="Échec">Échec</mat-option>
             </mat-select>
@@ -359,6 +367,7 @@ export class DeplacementDialogComponent {
             <td mat-cell *matCellDef="let i">
               <div class="statut-col">
                 <span class="status-chip {{ iStatutClass(i.statut) }}">{{ i.statut }}</span>
+                <app-attente-badge [intervention]="i" [canEdit]="canEditAttente(i)"></app-attente-badge>
                 @if (i.deplacementRequis) {
                   <span class="dep-badge" [matTooltip]="i.deplacementNote || 'Déplacement requis'">
                     <mat-icon>directions_car</mat-icon> Déplacement
@@ -401,6 +410,11 @@ export class DeplacementDialogComponent {
                       </button>
                       <button mat-flat-button class="btn-echec" (click)="markEchec(i)" matTooltip="Échec">
                         <mat-icon>cancel</mat-icon> Échec
+                      </button>
+                      <button mat-icon-button class="btn-attente-icon" (click)="attenteFlow.ecrireRapport(i)"
+                              [matTooltip]="i.attenteMotif ? 'Ajouter un mini-rapport' : 'Mettre en attente : expliquer pourquoi elle reste ouverte'"
+                              [attr.aria-label]="i.attenteMotif ? 'Ajouter un mini-rapport' : 'Mettre en attente'">
+                        <mat-icon>pause_circle</mat-icon>
                       </button>
                     </div>
                   }
@@ -453,6 +467,11 @@ export class DeplacementDialogComponent {
                     </button>
                     <button mat-menu-item (click)="markEchec(i)">
                       <mat-icon>cancel</mat-icon> Marquer Échec
+                    </button>
+                  }
+                  @if (canEditAttente(i)) {
+                    <button mat-menu-item (click)="attenteFlow.ecrireRapport(i)">
+                      <mat-icon>pause_circle</mat-icon> {{ i.attenteMotif ? 'Ajouter un mini-rapport' : 'Mettre en attente' }}
                     </button>
                   }
                   <!-- Support uniquement : demander déplacement -->
@@ -547,6 +566,7 @@ export class DeplacementDialogComponent {
               </div>
               <div class="ic-row">
                 <span class="status-chip {{ iStatutClass(i.statut) }}">{{ i.statut }}</span>
+                <app-attente-badge [intervention]="i" [canEdit]="canEditAttente(i)"></app-attente-badge>
                 @if (i.deplacementRequis) {
                   <span class="dep-badge" [matTooltip]="i.deplacementNote || 'Déplacement requis'">
                     <mat-icon>directions_car</mat-icon> Déplacement
@@ -575,6 +595,9 @@ export class DeplacementDialogComponent {
                         </button>
                         <button mat-flat-button class="btn-echec" (click)="markEchec(i)" matTooltip="Échec">
                           <mat-icon>cancel</mat-icon> Échec
+                        </button>
+                        <button mat-stroked-button class="btn-attente" (click)="attenteFlow.ecrireRapport(i)">
+                          <mat-icon>pause_circle</mat-icon> {{ i.attenteMotif ? 'Mini-rapport' : 'En attente' }}
                         </button>
                       </div>
                     }
@@ -618,6 +641,11 @@ export class DeplacementDialogComponent {
                     @if ((auth.isSuperadmin() || auth.isAdmin()) && i.statut === 'En cours') {
                       <button mat-menu-item (click)="markTerminee(i)"><mat-icon>check_circle</mat-icon> Marquer Terminée</button>
                       <button mat-menu-item (click)="markEchec(i)"><mat-icon>cancel</mat-icon> Marquer Échec</button>
+                    }
+                    @if (canEditAttente(i)) {
+                      <button mat-menu-item (click)="attenteFlow.ecrireRapport(i)">
+                        <mat-icon>pause_circle</mat-icon> {{ i.attenteMotif ? 'Ajouter un mini-rapport' : 'Mettre en attente' }}
+                      </button>
                     }
                     @if (auth.isSupport() && (i.statut === 'Assignée' || i.statut === 'En cours') && !i.deplacementRequis && !i.deplacementValide) {
                       <button mat-menu-item (click)="demanderDeplacement(i)" class="dep-menu-item">
@@ -692,6 +720,7 @@ export class DeplacementDialogComponent {
     .table-container { overflow-x: auto; }
     .pending-notice { display: flex; align-items: center; gap: 6px; color: #e65100; font-size: 13px; margin-top: 4px; font-weight: 500; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
     .deplacement-notice { display: flex; align-items: center; gap: 6px; color: #6a1b9a; font-size: 13px; margin-top: 4px; font-weight: 500; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+    .attente-notice { display: flex; align-items: center; gap: 6px; color: #b71c1c; font-size: 13px; margin-top: 4px; font-weight: 600; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
     .view-toggle { display: flex; background: #f0f4f8; border-radius: 8px; padding: 2px;
       button { border-radius: 6px !important; &.active-view { background: white; box-shadow: 0 1px 4px rgba(0,0,0,.12); mat-icon { color: var(--primary); } } }
     }
@@ -785,6 +814,8 @@ export class DeplacementDialogComponent {
     .chrono-badge { display: inline-flex; align-items: center; gap: 3px; background: #fff8e1; color: #e65100; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; font-family: monospace; mat-icon { font-size: 13px; width: 13px; height: 13px; } }
     .btn-terminee { background: #e8f5e9 !important; color: #2e7d32 !important; font-size: 11px; height: 30px; padding: 0 8px; min-width: 0; mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 2px; } }
     .btn-echec { background: #fce4ec !important; color: #c62828 !important; font-size: 11px; height: 30px; padding: 0 8px; min-width: 0; mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 2px; } }
+    .btn-attente-icon { color: #e65100; }
+    .btn-attente { border-color: #ffcc80 !important; color: #b23c00 !important; font-size: 11px; height: 30px; padding: 0 8px; min-width: 0; mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 2px; } }
     .btn-dep { color: #6a1b9a; width: 30px; height: 30px; mat-icon { font-size: 18px; } }
     .dep-pending-tag {
       display: inline-flex; align-items: center; gap: 2px;
@@ -881,6 +912,7 @@ export class InterventionListComponent implements OnDestroy {
     this.exportSvc.exportPdf('Liste des Interventions', this.EXPORT_COLS, rows as never);
   }
   private interventionSvc = inject(InterventionService);
+  attenteFlow = inject(AttenteFlowService);
   private userSvc = inject(UserService);
   private notifSvc = inject(NotificationService);
   private dialog     = inject(MatDialog);
@@ -942,6 +974,12 @@ export class InterventionListComponent implements OnDestroy {
     return this.interventionSvc.getAllRaw().filter(i => i.statut === 'Assignée' && i.technicienId === uid).length;
   });
 
+  mesAttentesARelancer = computed(() => {
+    const uid = this.auth.currentUser()?.id?.trim();
+    return this.interventionSvc.getAllRaw()
+      .filter(i => i.statut === 'En cours' && i.technicienId?.trim() === uid && attenteARelancer(i)).length;
+  });
+
   deplacementCount = computed(() =>
     this.interventionSvc.getAllRaw().filter(i => i.deplacementRequis).length
   );
@@ -963,7 +1001,8 @@ export class InterventionListComponent implements OnDestroy {
     const ft = this.filterType();
     if (ft) items = items.filter(i => i.type === ft);
     const fs = this.filterStatut();
-    if (fs) items = items.filter(i => i.statut === fs);
+    if (fs === 'En attente') items = items.filter(i => i.statut === 'En cours' && !!i.attenteMotif);
+    else if (fs) items = items.filter(i => i.statut === fs);
     const { start, end } = this.dateRange();
     // Comparaison en timestamps (et non en chaînes) : le format ISO renvoyé par
     // l'API (+00:00) et celui produit par Date.toISOString() (.000Z) ne sont
@@ -1022,6 +1061,11 @@ export class InterventionListComponent implements OnDestroy {
 
   isMyIntervention(i: Intervention): boolean {
     return i.technicienId?.trim() === this.auth.currentUser()?.id?.trim();
+  }
+
+  canEditAttente(i: Intervention): boolean {
+    return i.statut === 'En cours' &&
+      (this.isMyIntervention(i) || this.auth.isSupport() || this.auth.isAdmin() || this.auth.isSuperadmin());
   }
 
   agentDayInterventions(agentId: string, excludeId: string): Intervention[] {

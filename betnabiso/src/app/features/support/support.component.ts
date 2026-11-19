@@ -24,6 +24,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Intervention } from '../../core/models/intervention.model';
 import { User } from '../../core/models/user.model';
 import { AffecterChauffeurDialogComponent } from '../interventions/intervention-list/intervention-list.component';
+import { AttenteBadgeComponent, AttenteFlowService, attenteARelancer } from '../../shared/components/attente/attente';
 
 @Component({
   selector: 'app-support',
@@ -32,7 +33,8 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
     RouterLink, FormsModule, DatePipe,
     MatCardModule, MatButtonModule, MatIconModule, MatTableModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatMenuModule,
-    MatSnackBarModule, MatTooltipModule, MatDividerModule, MatChipsModule, MatDialogModule
+    MatSnackBarModule, MatTooltipModule, MatDividerModule, MatChipsModule, MatDialogModule,
+    AttenteBadgeComponent
   ],
   template: `
     <div class="page-container">
@@ -62,6 +64,13 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
           <div class="stat-info">
             <div class="stat-value">{{ countByStatut('En cours') }}</div>
             <div class="stat-label">En cours</div>
+            @if (enAttente().length > 0) {
+              <button type="button" class="attente-stat" [class.relance]="aRelancer() > 0"
+                      (click)="filterStatut.set('En attente')">
+                dont {{ enAttente().length }} en attente
+                @if (aRelancer() > 0) { · {{ aRelancer() }} à relancer }
+              </button>
+            }
           </div>
         </div>
         <div class="stat-card green">
@@ -119,6 +128,7 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
                   <mat-option value="">Tous</mat-option>
                   <mat-option value="Assignée">Assignée</mat-option>
                   <mat-option value="En cours">En cours</mat-option>
+                  <mat-option value="En attente">En cours · en attente</mat-option>
                   <mat-option value="Terminée">Terminée</mat-option>
                   <mat-option value="Échec">Échec</mat-option>
                 </mat-select>
@@ -199,6 +209,7 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
                 </th>
                 <td mat-cell *matCellDef="let i">
                   <span class="status-chip {{ sClass(i.statut) }}">{{ i.statut }}</span>
+                  <app-attente-badge [intervention]="i" [canEdit]="i.statut === 'En cours'"></app-attente-badge>
                   @if (i.deplacementRequis && !i.deplacementValide && !i.deplacementRefuse) {
                     <div class="dep-badge dep-warn" [matTooltip]="'Déplacement demandé : ' + (i.deplacementNote || '—') + '\nPar : ' + (i.deplacementRequestedBy || '—')">
                       <mat-icon>directions_car</mat-icon> Déplacem. en attente
@@ -246,6 +257,11 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
                         <mat-icon>delete</mat-icon> Supprimer
                       </button>
                     }
+                    @if (i.statut === 'En cours') {
+                      <button mat-menu-item (click)="attenteFlow.ecrireRapport(i)">
+                        <mat-icon>pause_circle</mat-icon> {{ i.attenteMotif ? 'Ajouter un mini-rapport' : 'Mettre en attente' }}
+                      </button>
+                    }
                     <a mat-menu-item [routerLink]="['/agents', i.agentId]">
                       <mat-icon>person</mat-icon> Voir l'agent
                     </a>
@@ -286,6 +302,11 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
                           <mat-icon>delete</mat-icon> Supprimer
                         </button>
                       }
+                      @if (i.statut === 'En cours') {
+                        <button mat-menu-item (click)="attenteFlow.ecrireRapport(i)">
+                          <mat-icon>pause_circle</mat-icon> {{ i.attenteMotif ? 'Ajouter un mini-rapport' : 'Mettre en attente' }}
+                        </button>
+                      }
                       <a mat-menu-item [routerLink]="['/agents', i.agentId]">
                         <mat-icon>person</mat-icon> Voir l'agent
                       </a>
@@ -314,6 +335,7 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
 
                   <div class="sup-row">
                     <span class="status-chip {{ sClass(i.statut) }}">{{ i.statut }}</span>
+                  <app-attente-badge [intervention]="i" [canEdit]="i.statut === 'En cours'"></app-attente-badge>
                     @if (i.deplacementRequis && !i.deplacementValide && !i.deplacementRefuse) {
                       <div class="dep-badge dep-warn" [matTooltip]="'Déplacement demandé : ' + (i.deplacementNote || '—')">
                         <mat-icon>directions_car</mat-icon> En attente
@@ -544,6 +566,12 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
     .signal-assign-btn { font-size: 12px !important; flex: 1; }
 
     /* Présence */
+    .attente-stat {
+      margin-top: 6px; padding: 2px 8px; border-radius: 10px; cursor: pointer;
+      border: 1px solid #ffcc80; background: #fff3e0; color: #b23c00;
+      font: inherit; font-size: 11px; font-weight: 600;
+      &.relance { border-color: #ef9a9a; background: #ffebee; color: #b71c1c; }
+    }
     .online-stat-chip {
       display: inline-flex; align-items: center; gap: 5px;
       background: rgba(76,175,80,0.12); color: #2e7d32;
@@ -602,6 +630,7 @@ import { AffecterChauffeurDialogComponent } from '../interventions/intervention-
 })
 export class SupportComponent {
   private interventionSvc = inject(InterventionService);
+  attenteFlow = inject(AttenteFlowService);
   private userSvc         = inject(UserService);
   private router          = inject(Router);
   auth                    = inject(AuthService);
@@ -674,7 +703,8 @@ export class SupportComponent {
     const ft = this.filterTech();
     if (ft) items = items.filter(i => i.technicienId === ft);
     const fs = this.filterStatut();
-    if (fs) items = items.filter(i => i.statut === fs);
+    if (fs === 'En attente') items = items.filter(i => i.statut === 'En cours' && !!i.attenteMotif);
+    else if (fs) items = items.filter(i => i.statut === fs);
     const col = this.sortCol();
     const dir = this.sortDir() === 'asc' ? 1 : -1;
     // Copie avant tri : sort() mute le tableau en place et renvoie la même
@@ -714,6 +744,9 @@ export class SupportComponent {
     if (this.sortCol() !== col) return 'unfold_more';
     return this.sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
+
+  enAttente = computed(() => this.allInterventions().filter(i => i.statut === 'En cours' && !!i.attenteMotif));
+  aRelancer = computed(() => this.enAttente().filter(attenteARelancer).length);
 
   countByStatut(s: string): number {
     return this.allInterventions().filter(i => i.statut === s).length;

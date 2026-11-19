@@ -41,7 +41,36 @@ export interface Intervention {
   /* Traçabilité : intervention créée à partir d'un signalement libre-service (QR code) */
   viaSignalement?: boolean;
   signalementNotifId?: string;
+  /* Intervention "En cours" bloquée en attente (agent injoignable, pièce...) :
+     dernier mini-rapport en date ; l'historique complet est dans les suivis. */
+  attenteMotif?: AttenteMotif | null;
+  attenteNote?: string | null;
+  attenteDepuis?: string | null;
+  attenteMaj?: string | null;
 }
+
+export type AttenteMotif = 'agent' | 'materiel' | 'reseau' | 'tiers' | 'autre';
+
+export const ATTENTE_MOTIFS: { value: AttenteMotif; label: string; short: string; icon: string }[] = [
+  { value: 'agent',    label: "En attente de l'agent",          short: 'Attente agent',    icon: 'person_search' },
+  { value: 'materiel', label: 'En attente de matériel / pièce', short: 'Attente matériel', icon: 'inventory_2' },
+  { value: 'reseau',   label: 'Réseau ou électricité coupé',     short: 'Réseau / courant', icon: 'signal_wifi_off' },
+  { value: 'tiers',    label: "En attente d'un tiers",           short: 'Attente tiers',    icon: 'support_agent' },
+  { value: 'autre',    label: 'Autre raison',                    short: 'En attente',       icon: 'more_horiz' },
+];
+
+export interface InterventionSuivi {
+  id: string;
+  auteurId: string;
+  auteurNom: string | null;
+  type: 'attente' | 'reprise';
+  motif: AttenteMotif | null;
+  note: string | null;
+  createdAt: string;
+}
+
+/** Au-delà de ce délai sans nouveau mini-rapport, l'attente est signalée comme à relancer. */
+export const ATTENTE_RELANCE_HEURES = 24;
 
 export interface ReassignmentLog {
   id: string;

@@ -34,6 +34,50 @@ try {
     }
 } catch (Throwable $e) {}
 
+// Migration défensive : suivi des interventions "En cours" bloquées en attente
+// (agent injoignable, pièce manquante...). Les colonnes portent l'état courant
+// pour l'affichage des listes sans jointure ; la table garde l'historique des
+// mini-rapports successifs.
+try {
+    if (DB_DRIVER === 'pgsql') {
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "attenteMotif" VARCHAR(32)');
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "attenteNote" TEXT');
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "attenteDepuis" TIMESTAMP');
+        $db->exec('ALTER TABLE interventions ADD COLUMN IF NOT EXISTS "attenteMaj" TIMESTAMP');
+        $db->exec('CREATE TABLE IF NOT EXISTS intervention_suivis (
+            id VARCHAR(64) PRIMARY KEY,
+            "interventionId" VARCHAR(64) NOT NULL,
+            "auteurId" VARCHAR(64),
+            "auteurNom" VARCHAR(255),
+            type VARCHAR(16) NOT NULL,
+            motif VARCHAR(32),
+            note TEXT,
+            "createdAt" TIMESTAMP DEFAULT NOW()
+        )');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_suivis_interv ON intervention_suivis ("interventionId")');
+    } else {
+        foreach (['attenteMotif' => 'VARCHAR(32)', 'attenteNote' => 'TEXT',
+                  'attenteDepuis' => 'DATETIME', 'attenteMaj' => 'DATETIME'] as $col => $type) {
+            if (!$db->query("SHOW COLUMNS FROM interventions LIKE '$col'")->fetch()) {
+                $db->exec("ALTER TABLE interventions ADD COLUMN $col $type NULL");
+            }
+        }
+        $db->exec('CREATE TABLE IF NOT EXISTS intervention_suivis (
+            id VARCHAR(64) PRIMARY KEY,
+            interventionId VARCHAR(64) NOT NULL,
+            auteurId VARCHAR(64),
+            auteurNom VARCHAR(255),
+            type VARCHAR(16) NOT NULL,
+            motif VARCHAR(32),
+            note TEXT,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_suivis_interv (interventionId)
+        )');
+    }
+} catch (Throwable $e) {}
+
+const ATTENTE_MOTIFS = ['agent', 'materiel', 'reseau', 'tiers', 'autre'];
+
 function auditLog(PDO $db, array $current, string $act, string $resId, string $details = ''): void {
     try {
         $db->prepare(
@@ -85,6 +129,8 @@ function formatInterv(array $i): array {
         'updatedat'=>'updatedAt','piecejointe'=>'pieceJointe',
         'datepplanifiee'=>'datePlanifiee',
         'viasignalement'=>'viaSignalement','signalementnotifid'=>'signalementNotifId','audiomessage'=>'audioMessage',
+        'attentemotif'=>'attenteMotif','attentenote'=>'attenteNote',
+        'attentedepuis'=>'attenteDepuis','attentemaj'=>'attenteMaj',
     ];
     // Ajout dynamique de la clé lowercase pour deplacementTermine (MySQL retourne tout en minuscules)
     $camel[strtolower('deplacementTermine')] = 'deplacementTermine';
@@ -95,7 +141,8 @@ function formatInterv(array $i): array {
     }
     // Convertir dates en ISO 8601
     foreach (['assignedAt','datePlanifiee','dateDebut','dateFin',
-              'deplacementRequestedAt','deplacementValideAt','updatedAt'] as $f) {
+              'deplacementRequestedAt','deplacementValideAt','updatedAt',
+              'attenteDepuis','attenteMaj'] as $f) {
         if (!empty($out[$f])) $out[$f] = date('c', strtotime($out[$f]));
     }
     // Nullifier les chaînes vides
@@ -103,7 +150,8 @@ function formatInterv(array $i): array {
               'duree','observations','pieceJointe','deplacementNote',
               'deplacementRequestedBy','deplacementRequestedAt',
               'deplacementValideBy','deplacementValideAt',
-              'deplacementRefuseBy','chauffeurId','chauffeurNom','signalementNotifId','audioMessage'] as $f) {
+              'deplacementRefuseBy','chauffeurId','chauffeurNom','signalementNotifId','audioMessage',
+              'attenteMotif','attenteNote','attenteDepuis','attenteMaj'] as $f) {
         if (isset($out[$f]) && $out[$f] === '') $out[$f] = null;
     }
     if (isset($out['duree'])) $out['duree'] = $out['duree'] ? (int)$out['duree'] : null;
@@ -189,6 +237,26 @@ if ($m === 'GET') {
         $stmt->execute([$id]);
         $i = $stmt->fetch();
         if (!$i) respond(404, ['error' => 'Intervention non trouvée']);
+        if ($action === 'suivis') {
+            if ($current['role'] === 'technicien' && trim($i['technicienid'] ?? $i['technicienId'] ?? '') !== trim($current['user_id'])) {
+                respond(403, ['error' => 'Interdit']);
+            }
+            enforceInterventionZone($current, $i['agentzone'] ?? $i['agentZone'] ?? null);
+            $s = $db->prepare(
+                'SELECT id, "auteurId", "auteurNom", type, motif, note, "createdAt"
+                 FROM intervention_suivis WHERE "interventionId" = ? ORDER BY "createdAt" DESC'
+            );
+            $s->execute([$id]);
+            respond(200, array_map(fn($r) => [
+                'id'        => trim($r['id']),
+                'auteurId'  => trim((string)($r['auteurid'] ?? $r['auteurId'] ?? '')),
+                'auteurNom' => $r['auteurnom'] ?? $r['auteurNom'] ?? null,
+                'type'      => $r['type'],
+                'motif'     => $r['motif'] ?: null,
+                'note'      => $r['note'] ?: null,
+                'createdAt' => date('c', strtotime($r['createdat'] ?? $r['createdAt'])),
+            ], $s->fetchAll()));
+        }
         // Un technicien/chauffeur ne peut pas lire le détail d'une intervention
         // qui n'est pas la sienne en devinant simplement son id.
         if ($current['role'] === 'technicien' && trim($i['technicienid'] ?? $i['technicienId'] ?? '') !== trim($current['user_id'])) {
@@ -350,6 +418,14 @@ if ($m === 'PUT' && $id) {
             else $vals[] = $b[$f] ?? null;
         }
     }
+    // Une intervention clôturée n'est plus en attente : on efface l'état courant
+    // (l'historique des mini-rapports reste dans intervention_suivis).
+    if (in_array($b['statut'] ?? '', ['Terminée', 'Échec'], true)) {
+        $fields[] = '"attenteMotif" = NULL';
+        $fields[] = '"attenteNote" = NULL';
+        $fields[] = '"attenteDepuis" = NULL';
+        $fields[] = '"attenteMaj" = NULL';
+    }
     if (($b['statut'] ?? '') === 'Terminée') {
         $curr    = $db->prepare('SELECT "dateDebut", "dateFin" FROM interventions WHERE id = ?');
         $curr->execute([$id]);
@@ -380,7 +456,48 @@ if ($m === 'PATCH' && $id) {
     if (!$zoneRow) respond(404, ['error' => 'Intervention non trouvée']);
     $interventionZone = $zoneRow['agentzone'] ?? $zoneRow['agentZone'] ?? null;
 
-    if ($action === 'assign') {
+    if ($action === 'attente' || $action === 'reprendre') {
+        // Le technicien assigné documente pourquoi son intervention reste
+        // ouverte ; le support/admin peut aussi le faire (ex. agent injoignable
+        // de leur côté).
+        $rowStmt = $db->prepare('SELECT "technicienId", statut, "attenteDepuis" FROM interventions WHERE id = ?');
+        $rowStmt->execute([$id]);
+        $row = $rowStmt->fetch();
+        $isOwner = trim($row['technicienid'] ?? $row['technicienId'] ?? '') === trim($current['user_id']);
+        if (!$isOwner && !in_array($current['role'], ['superadmin', 'admin', 'support'], true)) {
+            respond(403, ['error' => 'Interdit']);
+        }
+        enforceInterventionZone($current, $interventionZone);
+        if (($row['statut'] ?? '') !== 'En cours') {
+            respond(409, ['error' => 'Seule une intervention en cours peut être mise en attente']);
+        }
+        $auteurNom = $current['prenom'] . ' ' . $current['nom'];
+        if ($action === 'attente') {
+            $motif = $b['motif'] ?? '';
+            $note  = trim((string)($b['note'] ?? ''));
+            if (!in_array($motif, ATTENTE_MOTIFS, true)) respond(400, ['error' => 'Motif invalide']);
+            if ($note === '') respond(400, ['error' => 'Le mini-rapport est obligatoire']);
+            $note = mb_substr($note, 0, 1000);
+            $alreadyWaiting = !empty($row['attentedepuis'] ?? $row['attenteDepuis'] ?? null);
+            $db->prepare(
+                'UPDATE interventions SET "attenteMotif"=?, "attenteNote"=?, "attenteMaj"=NOW()'
+                . ($alreadyWaiting ? '' : ', "attenteDepuis"=NOW()') . ' WHERE id=?'
+            )->execute([$motif, $note, $id]);
+        } else {
+            $motif = null;
+            $note  = trim((string)($b['note'] ?? '')) ?: null;
+            $db->prepare(
+                'UPDATE interventions SET "attenteMotif"=NULL, "attenteNote"=NULL, "attenteDepuis"=NULL, "attenteMaj"=NULL WHERE id=?'
+            )->execute([$id]);
+        }
+        $db->prepare(
+            'INSERT INTO intervention_suivis (id, "interventionId", "auteurId", "auteurNom", type, motif, note, "createdAt")
+             VALUES (?,?,?,?,?,?,?,NOW())'
+        )->execute([
+            bin2hex(random_bytes(16)), $id, trim($current['user_id']), $auteurNom,
+            $action === 'attente' ? 'attente' : 'reprise', $motif, $note,
+        ]);
+    } elseif ($action === 'assign') {
         requireRole(['superadmin', 'admin', 'support'], $current);
         enforceInterventionZone($current, $interventionZone);
         $db->prepare(
