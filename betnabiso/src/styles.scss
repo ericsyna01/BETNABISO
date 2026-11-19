@@ -422,7 +422,13 @@ html.dark-mode {
   .mat-mdc-option {
     color: #e2e8f0 !important;
     background: #1e293b !important;
+    .mdc-list-item__primary-text { color: #e2e8f0 !important; }
     &:hover, &.mat-mdc-option-active { background: #253347 !important; }
+    &.mdc-list-item--selected {
+      background: #1e3a52 !important;
+      .mdc-list-item__primary-text { color: #7dd3fc !important; }
+    }
+    .mat-mdc-option-pseudo-checkbox { background: #38bdf8 !important; }
   }
 
   /* ─ Tabs ────────────────────────────── */
@@ -808,4 +814,52 @@ html.dark-mode {
   .mat-mdc-form-field-hint-wrapper, .mat-mdc-form-field-error-wrapper { padding: 0; }
   .mat-mdc-form-field-hint { font-size: 11px; color: #94a3b8; }
   .mat-mdc-form-field-error { font-size: 11px; }
+}
+
+/* ── Menu déroulant des mat-select (listes Zone/Statut/Type/...) ─────────
+   Le panneau est injecté par le CDK Overlay directement dans <body>, hors
+   de l'arbre de n'importe quel composant : une règle globale est la seule
+   façon de le styler, un ::ng-deep local n'aurait aucun effet. Carte
+   arrondie et lignes généreuses pour rester cohérent avec le style pilule
+   des champs, coche par défaut de Material remplacée par un badge rond. */
+.mat-mdc-select-panel {
+  border-radius: 16px !important;
+  padding: 8px !important;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 14px 34px rgba(16, 35, 64, 0.14) !important;
+}
+.mat-mdc-option {
+  border-radius: 12px !important;
+  min-height: 46px !important;
+  margin: 1px 0;
+
+  .mdc-list-item__primary-text { font-size: 13.5px; color: #1a2742; }
+
+  &:hover:not(.mdc-list-item--disabled):not(.mdc-list-item--selected),
+  &.mat-mdc-option-active:not(.mdc-list-item--selected) {
+    background-color: #f4f7fb !important;
+  }
+
+  &.mdc-list-item--selected {
+    background-color: #eaf1fb !important;
+    .mdc-list-item__primary-text { color: #1a3a5c; font-weight: 700; }
+  }
+
+  // Coche par défaut de Material (simple glyphe) → badge rond plein avec
+  // coche blanche, dessinée nous-mêmes pour un rendu fiable toutes plateformes.
+  .mat-mdc-option-pseudo-checkbox {
+    width: 20px; height: 20px; flex-shrink: 0; margin-left: 12px;
+    border: none !important; border-radius: 50%; background: #2a5fa0;
+    position: relative;
+    &::after, &::before { content: none !important; }
+  }
+  .mat-mdc-option-pseudo-checkbox.mat-pseudo-checkbox-minimal.mat-pseudo-checkbox-checked::after {
+    content: '' !important;
+    position: absolute !important; inset: 0 !important;
+    width: 20px !important; height: 20px !important;
+    top: 0 !important; left: 0 !important; right: auto !important; bottom: auto !important;
+    transform: none !important; border: none !important;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") no-repeat center !important;
+    background-size: 12px 12px !important;
+  }
 }
