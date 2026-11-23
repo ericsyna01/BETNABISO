@@ -58,7 +58,7 @@ export class MissionService {
 
   async update(id: string, data: Partial<Pick<Mission,
     'titre' | 'description' | 'type' | 'priorite' | 'assignedToId' | 'assignedToNom' |
-    'assignedToId2' | 'assignedToNom2' | 'dateMission'
+    'assignedToId2' | 'assignedToNom2' | 'agentId' | 'agentNom' | 'dateMission'
   >>): Promise<Mission | null> {
     try {
       const m = await firstValueFrom(this.http.put<Mission>(`${API}/${id}`, data));

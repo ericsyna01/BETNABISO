@@ -12,6 +12,9 @@ export interface Mission {
   assignedToNom: string;
   assignedToId2?: string;
   assignedToNom2?: string;
+  /* Agent (point de vente) concerné par la mission, s'il y en a un */
+  agentId?: string | null;
+  agentNom?: string | null;
   assignedById: string;
   assignedByNom: string;
   dateMission: string;

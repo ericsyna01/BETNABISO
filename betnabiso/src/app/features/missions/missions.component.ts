@@ -1,7 +1,8 @@
 import { Component, computed, effect, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { DatePipe, SlicePipe } from '@angular/common';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +18,10 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import { RouterLink } from '@angular/router';
+import { AgentService } from '../../core/services/agent.service';
+import { Agent } from '../../core/models/agent.model';
 import { MissionService } from '../../core/services/mission.service';
 import { UserService } from '../../core/services/user.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -67,7 +72,7 @@ export class NotesDialogComponent {
   standalone: true,
   imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule,
             MatSelectModule, MatButtonModule, MatIconModule,
-            MatDatepickerModule],
+            MatDatepickerModule, MatAutocompleteModule],
   template: `
     <h2 mat-dialog-title>
       <mat-icon style="vertical-align:middle;margin-right:8px;color:#1a3a5c">{{ data.mission ? 'edit' : 'assignment_add' }}</mat-icon>
@@ -76,6 +81,33 @@ export class NotesDialogComponent {
     <mat-dialog-content style="padding-top:12px;min-width:340px">
       <form [formGroup]="form" id="missionForm" (ngSubmit)="submit()">
         <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Agent concerné (optionnel)</mat-label>
+          <mat-icon matPrefix>storefront</mat-icon>
+          <input matInput [formControl]="agentSearch" [matAutocomplete]="agentAuto"
+                 placeholder="Tapez le nom, l'identifiant ou l'AnyDesk"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          @if (agentSearch.value) {
+            <button matSuffix mat-icon-button type="button" aria-label="Retirer l'agent" (click)="clearAgent()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          <mat-autocomplete #agentAuto="matAutocomplete" (optionSelected)="pickAgent($event)">
+            @for (a of agentMatches(); track a.id) {
+              <mat-option [value]="a.nomAgent">
+                <div class="ag-opt">
+                  <span class="ag-opt-nom">{{ a.nomAgent }}</span>
+                  <span class="ag-opt-sub">{{ a.zone }}{{ a.identifiant ? ' · ' + a.identifiant : '' }}</span>
+                </div>
+              </mat-option>
+            }
+            @if (agentSearchText().length >= 2 && agentMatches().length === 0) {
+              <mat-option disabled>Aucun agent trouvé</mat-option>
+            }
+          </mat-autocomplete>
+          <mat-hint>Remplit aussi le titre s'il est vide</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%;margin-top:8px">
           <mat-label>Titre de la mission *</mat-label>
           <mat-icon matPrefix>title</mat-icon>
           <input matInput formControlName="titre" placeholder="Ex: Installation routeur salle B">
@@ -173,6 +205,9 @@ export class NotesDialogComponent {
   `,
   styles: [`
     :host { display: block; }
+    .ag-opt { display: flex; flex-direction: column; line-height: 1.25; padding: 4px 0; }
+    .ag-opt-nom { font-weight: 600; }
+    .ag-opt-sub { font-size: 11.5px; color: #607d8b; }
     .tech-avail {
       display: flex; align-items: center; gap: 6px;
       padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 8px;
@@ -200,6 +235,37 @@ export class MissionDialogComponent {
     this.data.preselect ?? (this.data.mission ? this.data.techniciens.find(t => t.id === this.data.mission!.assignedToId) ?? null : null)
   );
   readonly today = new Date(new Date().setHours(0, 0, 0, 0));
+
+  private agentSvc = inject(AgentService);
+  agentSearch = new FormControl<string>(this.data.mission?.agentNom ?? '', { nonNullable: true });
+  private selectedAgent = signal<{ id: string; nom: string } | null>(
+    this.data.mission?.agentId ? { id: this.data.mission.agentId, nom: this.data.mission.agentNom ?? '' } : null
+  );
+  agentSearchText = toSignal(this.agentSearch.valueChanges, { initialValue: this.agentSearch.value });
+  agentMatches = computed(() => {
+    const q = this.agentSearchText().toLowerCase().trim();
+    if (q.length < 2) return [] as Agent[];
+    return this.agentSvc.getAll().filter(a =>
+      (a.nomAgent ?? '').toLowerCase().includes(q) ||
+      (a.identifiant ?? '').toLowerCase().includes(q) ||
+      (a.anydesk ?? '').includes(q) ||
+      (a.anydesk_serveur ?? '').includes(q)
+    ).slice(0, 30);
+  });
+
+  pickAgent(e: MatAutocompleteSelectedEvent): void {
+    const nom = e.option.value as string;
+    const agent = this.agentSvc.getAll().find(a => a.nomAgent === nom);
+    if (!agent) return;
+    this.selectedAgent.set({ id: agent.id, nom: agent.nomAgent });
+    const titre = this.form.get('titre');
+    if (titre && !titre.value?.trim()) titre.setValue(agent.nomAgent);
+  }
+
+  clearAgent(): void {
+    this.agentSearch.setValue('');
+    this.selectedAgent.set(null);
+  }
 
   form = this.fb.group({
     titre:         [this.data.mission?.titre ?? '', Validators.required],
@@ -259,6 +325,10 @@ export class MissionDialogComponent {
       assignedToNom: `${tech.prenom} ${tech.nom}`,
       assignedToId2: tech2?.id || null,
       assignedToNom2: tech2 ? `${tech2.prenom} ${tech2.nom}` : null,
+      // Seul un agent réellement choisi dans la liste est enregistré : un texte
+      // tapé sans sélection ne correspond à aucun agent.
+      agentId: this.selectedAgent() && this.agentSearch.value === this.selectedAgent()!.nom ? this.selectedAgent()!.id : null,
+      agentNom: this.selectedAgent() && this.agentSearch.value === this.selectedAgent()!.nom ? this.selectedAgent()!.nom : null,
       editId: this.data.mission?.id,
     });
   }
@@ -268,7 +338,7 @@ export class MissionDialogComponent {
 @Component({
   selector: 'app-mission-detail-dialog',
   standalone: true,
-  imports: [DatePipe, MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [DatePipe, MatDialogModule, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <h2 mat-dialog-title style="display:flex;align-items:center;gap:8px">
       <mat-icon style="color:#1a3a5c">assignment</mat-icon>
@@ -285,6 +355,13 @@ export class MissionDialogComponent {
         <div class="dd-section">
           <div class="dd-label"><mat-icon>notes</mat-icon> Description</div>
           <p class="dd-desc">{{ data.mission.description }}</p>
+        </div>
+      }
+
+      @if (data.mission.agentNom) {
+        <div class="dd-section">
+          <div class="dd-label"><mat-icon>storefront</mat-icon> Agent concerné</div>
+          <p><a [routerLink]="['/agents', data.mission.agentId]" mat-dialog-close>{{ data.mission.agentNom }}</a></p>
         </div>
       }
 
@@ -355,7 +432,7 @@ export class MissionDetailDialogComponent {
   selector: 'app-missions',
   standalone: true,
   imports: [
-    DatePipe, SlicePipe, ReactiveFormsModule, FormsModule,
+    DatePipe, SlicePipe, ReactiveFormsModule, FormsModule, RouterLink,
     MatCardModule, MatButtonModule, MatIconModule, MatTableModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatDialogModule, MatSnackBarModule, MatTooltipModule, MatChipsModule,
@@ -538,6 +615,11 @@ export class MissionDetailDialogComponent {
             </th>
             <td mat-cell *matCellDef="let m">
               <div class="mission-titre">{{ m.titre }}</div>
+              @if (m.agentNom && m.agentNom !== m.titre) {
+                <a class="mission-agent" [routerLink]="['/agents', m.agentId]" (click)="$event.stopPropagation()">
+                  <mat-icon>storefront</mat-icon>{{ m.agentNom }}
+                </a>
+              }
               <div class="mission-type">{{ m.type }}</div>
             </td>
           </ng-container>
@@ -720,6 +802,11 @@ export class MissionDetailDialogComponent {
                 </mat-icon>
                 <div class="mc-titre-wrap">
                   <div class="mission-titre">{{ m.titre }}</div>
+                  @if (m.agentNom && m.agentNom !== m.titre) {
+                    <a class="mission-agent" [routerLink]="['/agents', m.agentId]" (click)="$event.stopPropagation()">
+                      <mat-icon>storefront</mat-icon>{{ m.agentNom }}
+                    </a>
+                  }
                   <div class="mission-type">{{ m.type }}</div>
                 </div>
                 <span class="statut-chip {{ m.statut }}">{{ statutLabel(m.statut) }}</span>
@@ -914,6 +1001,8 @@ export class MissionDetailDialogComponent {
     .sort-icon   { font-size: 16px; width: 16px; height: 16px; color: #ccc; transition: color .2s; &.sort-active { color: #1a3a5c; } }
 
     .mission-titre { font-weight: 600; font-size: 13px; color: #1a3a5c; }
+    .mission-agent { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: #2a5fa0; text-decoration: none;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; } &:hover { text-decoration: underline; } }
     .mission-type  { font-size: 11px; color: #78909c; }
     .desc-cell  { font-size: 12px; color: #546e7a; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
     .no-value   { color: #ccc; font-size: 16px; }
@@ -1037,6 +1126,7 @@ export class MissionsComponent implements OnInit {
     if (sq) list = list.filter(m =>
       m.titre.toLowerCase().includes(sq) ||
       (m.description ?? '').toLowerCase().includes(sq) ||
+      (m.agentNom ?? '').toLowerCase().includes(sq) ||
       m.assignedToNom.toLowerCase().includes(sq)
     );
     const ft = this.filterTech();   if (ft) list = list.filter(m => m.assignedToId === ft);

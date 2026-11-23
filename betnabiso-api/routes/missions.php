@@ -4,12 +4,17 @@ $m       = method();
 $db      = getDB();
 $id      = $GLOBALS['path_id'] ?? param('id');
 
-// Colonnes additives : mission confiée à un binôme (deux personnes).
+// Colonnes additives : mission confiée à un binôme (deux personnes), et
+// agent (point de vente) concerné, choisi dans la liste plutôt que recopié
+// à la main dans le titre.
 if (DB_DRIVER === 'pgsql') {
     $db->exec('ALTER TABLE missions ADD COLUMN IF NOT EXISTS "assignedToId2" VARCHAR(36)');
     $db->exec('ALTER TABLE missions ADD COLUMN IF NOT EXISTS "assignedToNom2" VARCHAR(150)');
+    $db->exec('ALTER TABLE missions ADD COLUMN IF NOT EXISTS "agentId" VARCHAR(64)');
+    $db->exec('ALTER TABLE missions ADD COLUMN IF NOT EXISTS "agentNom" VARCHAR(255)');
 } else {
-    foreach (['assignedToId2' => 'VARCHAR(36)', 'assignedToNom2' => 'VARCHAR(150)'] as $col => $def) {
+    foreach (['assignedToId2' => 'VARCHAR(36)', 'assignedToNom2' => 'VARCHAR(150)',
+              'agentId' => 'VARCHAR(64)', 'agentNom' => 'VARCHAR(255)'] as $col => $def) {
         $exists = $db->query("SHOW COLUMNS FROM missions LIKE '$col'")->fetch();
         if (!$exists) $db->exec("ALTER TABLE missions ADD COLUMN \"$col\" $def");
     }
@@ -23,6 +28,7 @@ function fmtMission(array $r): array {
         'assignedbyid'  => 'assignedById',  'assignedbynom'  => 'assignedByNom',
         'datemission'   => 'dateMission',   'createdat'      => 'createdAt',
         'completedat'   => 'completedAt',
+        'agentid'       => 'agentId',       'agentnom'       => 'agentNom',
     ];
     $out = [];
     foreach ($r as $k => $v) { $out[$map[$k] ?? $k] = $v; }
@@ -49,12 +55,13 @@ if ($m === 'POST') {
     $b = body();
     $newId = bin2hex(random_bytes(16));
     $db->prepare(
-        'INSERT INTO missions (id,titre,description,type,priorite,"assignedToId","assignedToNom","assignedToId2","assignedToNom2","assignedById","assignedByNom","dateMission",statut)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        'INSERT INTO missions (id,titre,description,type,priorite,"assignedToId","assignedToNom","assignedToId2","assignedToNom2","agentId","agentNom","assignedById","assignedByNom","dateMission",statut)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
     )->execute([
         $newId, $b['titre'], $b['description'] ?? null, $b['type'] ?? 'Autre',
         $b['priorite'] ?? 'Normale', $b['assignedToId'], $b['assignedToNom'],
         $b['assignedToId2'] ?? null, $b['assignedToNom2'] ?? null,
+        ($b['agentId'] ?? null) ?: null, ($b['agentNom'] ?? null) ?: null,
         $current['user_id'], $current['prenom'].' '.$current['nom'],
         $b['dateMission'] ?? date('Y-m-d'), 'assignée',
     ]);
@@ -136,6 +143,8 @@ if ($m === 'PUT' && $id) {
     // Coéquipier : normalisé en NULL plutôt que chaîne vide quand on le retire.
     if (array_key_exists('assignedToId2', $b))  { $fields[] = '"assignedToId2" = ?';  $vals[] = $b['assignedToId2']  ?: null; }
     if (array_key_exists('assignedToNom2', $b)) { $fields[] = '"assignedToNom2" = ?'; $vals[] = $b['assignedToNom2'] ?: null; }
+    if (array_key_exists('agentId', $b))        { $fields[] = '"agentId" = ?';        $vals[] = $b['agentId']        ?: null; }
+    if (array_key_exists('agentNom', $b))       { $fields[] = '"agentNom" = ?';       $vals[] = $b['agentNom']       ?: null; }
     if (!$fields) respond(400, ['error' => 'Aucun champ à mettre à jour']);
     $vals[] = $id;
     $db->prepare('UPDATE missions SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
