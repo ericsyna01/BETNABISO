@@ -290,6 +290,10 @@ interface DayCell {
                   <div class="my-entry-type">{{ entry.type }}</div>
                   <div class="my-entry-hours">{{ entry.heureDebut }} – {{ entry.heureFin }}</div>
                   @if (entry.note) { <div class="entry-note">{{ entry.note }}</div> }
+                  <div class="coll-line" [class.alone]="collegues(entry).length === 0">
+                    <mat-icon>group</mat-icon>
+                    @if (collegues(entry).length) { Avec {{ collegues(entry).join(', ') }} } @else { Seul sur ce créneau }
+                  </div>
                 </div>
               </div>
             }
@@ -328,6 +332,10 @@ interface DayCell {
                     {{ entry.heureDebut }} – {{ entry.heureFin }}
                   </div>
                   @if (entry.note) { <div class="entry-note">{{ entry.note }}</div> }
+                  <div class="coll-line" [class.alone]="collegues(entry).length === 0">
+                    <mat-icon>group</mat-icon>
+                    @if (collegues(entry).length) { Avec {{ collegues(entry).join(', ') }} } @else { Seul sur ce créneau }
+                  </div>
                 </div>
                 <span class="creneau-badge" [style.background]="creneauColor(entry.type).fond" [style.color]="creneauColor(entry.type).texte">{{ entry.type }}</span>
               </div>
@@ -423,6 +431,9 @@ interface DayCell {
     .entry-hours { font-size:10px;color:var(--text-secondary); }
     .role-tag { font-size:9px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.5px; }
     .entry-note { font-size:10px;color:var(--text-secondary);font-style:italic;margin-top:3px; }
+    .coll-line { display:flex;align-items:flex-start;gap:4px;margin-top:5px;font-size:11px;font-weight:600;color:#1a3a5c;line-height:1.3;
+      mat-icon { font-size:14px;width:14px;height:14px;flex-shrink:0; }
+      &.alone { font-weight:500;color:var(--text-secondary); } }
     .entry-card.role-technicien { border-color:#00897b;background:#e0f2f1; }
     .entry-card.role-support    { border-color:#f57c00;background:#fff3e0; }
     .entry-card.role-admin      { border-color:#1565c0;background:#e3f2fd; }
@@ -599,6 +610,14 @@ export class PlanningComponent {
   });
 
   myNextEntry = computed(() => this.myUpcoming()[0] ?? null);
+
+  /** Collègues affectés au même créneau, le même jour (ex. ceux du matin entre eux). */
+  collegues(entry: PlanningEntry): string[] {
+    return this.planningSvc.getByDate(entry.date)
+      .filter(e => e.type === entry.type && e.userId !== entry.userId)
+      .map(e => e.userNom)
+      .filter((n, i, all) => !!n && all.indexOf(n) === i);
+  }
 
   dayLabel(dateStr: string)   { return JOURS_FR[new Date(dateStr + 'T12:00:00').getDay() - 1 < 0 ? 6 : new Date(dateStr + 'T12:00:00').getDay() - 1]?.slice(0, 3) ?? ''; }
   dateNum(dateStr: string)    { return new Date(dateStr + 'T12:00:00').getDate(); }
