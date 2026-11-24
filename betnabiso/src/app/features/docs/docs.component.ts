@@ -392,7 +392,7 @@ export class DocsComponent {
       icon: 'new_releases',
       color: '#00695c',
       bgColor: '#e0f2f1',
-      description: 'Cette section présente toutes les nouvelles fonctionnalités ajoutées à la plateforme BETNABISO : interface améliorée, navigation clavier, vue Kanban, import CSV, export PDF réel, PWA, agenda personnel, missions en binôme et bien plus encore.',
+      description: 'Cette section présente toutes les nouvelles fonctionnalités ajoutées à la plateforme BETNABISO : mise en attente des interventions avec mini-rapports, suivi des motifs d\'attente dans le Rapport, sélecteur de période avec raccourcis, choix de l\'agent dans les missions internes, collègues du même créneau au planning, et bien plus encore.',
       sections: [
         {
           id: 'nv-interface',
@@ -491,16 +491,17 @@ export class DocsComponent {
         {
           id: 'nv-date-filter',
           icon: 'date_range',
-          title: 'Filtre par période (Interventions)',
-          content: 'La liste des interventions dispose maintenant de deux champs de date — <strong>Du</strong> et <strong>Au</strong> — permettant de filtrer les interventions sur une période précise.',
+          title: 'Sélecteur de période avec raccourcis',
+          content: 'Les anciens champs « Du » et « Au » sont remplacés par un <strong>sélecteur de période unique</strong>, avec un double calendrier et des raccourcis. Il est disponible sur la liste des Interventions et dans le Rapport (Journal détaillé, Missions internes, Attentes).',
           steps: [
-            { icon: 'assignment', title: 'Ouvrir la liste des interventions', detail: 'Menu → « Toutes les interventions » ou « Mes interventions ».' },
-            { icon: 'date_range', title: 'Définir la période', detail: 'Renseigner les champs « Du » et « Au » dans la barre de filtres. Le filtre s\'applique instantanément.' },
-            { icon: 'filter_list_off', title: 'Réinitialiser', detail: 'Bouton « Réinitialiser filtres » → efface la période et tous les autres filtres.' },
+            { icon: 'date_range', title: 'Ouvrir le sélecteur', detail: 'Cliquer sur le champ « Période » (« Toutes les dates » par défaut).' },
+            { icon: 'bolt', title: 'Choisir un raccourci', detail: 'Aujourd\'hui, Hier, Cette semaine, Semaine dernière, Ce mois-ci, Mois dernier, Cette année, Année dernière — ou « Toutes les dates » pour tout afficher.' },
+            { icon: 'calendar_month', title: 'Ou choisir les dates', detail: 'Cliquer le jour de début puis le jour de fin dans le calendrier ; l\'heure peut être ajustée sous chaque mois.' },
+            { icon: 'check', title: 'Appliquer', detail: 'Bouton « Appliquer ». La croix dans le champ efface la période.' },
           ],
           tips: [
-            'Le filtre de période est cumulable avec la recherche texte, le statut et la priorité.',
-            'Laisser un champ vide signifie « sans limite » de ce côté (ex : « Du » vide = depuis le début).',
+            'Sur téléphone, le sélecteur s\'ouvre en bas de l\'écran, en pleine largeur.',
+            'La période se combine avec les autres filtres (recherche, type, statut...).',
           ]
         },
         {
@@ -743,6 +744,94 @@ export class DocsComponent {
           title: 'Tri par défaut des interventions : plus récentes en premier',
           content: 'La liste des interventions s\'ouvre désormais triée par <strong>date décroissante</strong> par défaut (les entrées du jour en haut), au lieu d\'un tri mixte par priorité/statut qui ne mettait pas systématiquement en avant les dernières interventions.',
         },
+
+        // ── Novembre 2026 ─────────────────────────────────────────
+        {
+          id: 'nv-attente',
+          icon: 'pause_circle',
+          title: 'Interventions en attente : mini-rapports',
+          content: 'Quand une intervention « En cours » ne peut pas être clôturée tout de suite (agent à rappeler, pièce manquante, coupure réseau...), le technicien la <strong>met en attente</strong> avec un motif et un court mini-rapport. Elle reste « En cours », mais tout le monde sait pourquoi.',
+          steps: [
+            { icon: 'pause_circle', title: 'Mettre en attente', detail: 'Sur une intervention en cours : bouton « En attente » (icône pause dans le tableau). Choisir le motif — attente de l\'agent, de matériel / pièce, réseau ou électricité coupé, attente d\'un tiers, autre — et écrire le mini-rapport.' },
+            { icon: 'edit_note', title: 'Donner des nouvelles', detail: 'Tant que l\'attente dure, le même bouton devient « Mini-rapport » pour ajouter un nouveau point de situation (le motif peut changer).' },
+            { icon: 'history', title: 'Consulter l\'historique', detail: 'Cliquer sur le badge orange « Attente agent · 26h » à côté du statut : tous les mini-rapports s\'affichent, avec les boutons « Reprendre » et « Nouveau mini-rapport ».' },
+            { icon: 'play_arrow', title: 'Reprendre ou clôturer', detail: '« Reprendre » retire l\'attente ; « Terminée » ou « Échec » la retire aussi automatiquement. L\'historique reste consultable.' },
+          ],
+          tips: [
+            'Après <strong>24h sans nouveau mini-rapport</strong>, le badge passe au rouge « À mettre à jour » et un rappel s\'affiche en haut de « Mes interventions ».',
+            'Support et admins peuvent aussi écrire un mini-rapport (menu ⋮ de l\'intervention).',
+            'Filtre Statut → « En cours · en attente » pour ne voir que les interventions bloquées.',
+          ]
+        },
+        {
+          id: 'nv-rapport-attentes',
+          icon: 'query_stats',
+          title: 'Rapport : onglet « Attentes »',
+          content: 'Un nouvel onglet du Rapport retrace <strong>l\'historique des motifs d\'attente</strong> pour en suivre l\'évolution. Il se filtre par période, motif et technicien.',
+          table: {
+            headers: ['Bloc', 'Ce qu\'il montre'],
+            rows: [
+              ['Indicateurs', 'Mises en attente, mini-rapports, durée moyenne d\'une attente, attentes en cours et à relancer'],
+              ['Répartition par motif', 'Nombre de mises en attente et temps total / moyen passé dans chaque motif'],
+              ['Évolution', 'Nouvelles mises en attente par semaine (ou par mois au-delà de 3 mois), par motif de départ'],
+              ['Journal', 'Tous les mini-rapports et reprises (date, agent, technicien, motif, note), avec export CSV'],
+            ]
+          },
+        },
+        {
+          id: 'nv-mission-agent',
+          icon: 'storefront',
+          title: 'Missions internes : choisir l\'agent concerné',
+          content: 'Plus besoin de quitter la fenêtre pour copier le nom de l\'agent. Le champ <strong>« Agent concerné »</strong> recherche l\'agent par son nom, son identifiant ou son AnyDesk.',
+          steps: [
+            { icon: 'search', title: 'Rechercher', detail: 'Nouvelle mission ou Modifier → taper quelques lettres (ex. « kold », « 2020484 ») → choisir l\'agent dans la liste.' },
+            { icon: 'title', title: 'Titre rempli', detail: 'Si le titre est vide, il prend le nom de l\'agent.' },
+            { icon: 'link', title: 'Retrouver l\'agent', detail: 'L\'agent s\'affiche sous le titre dans la liste et dans le détail de la mission, avec un lien vers sa fiche.' },
+          ],
+          tips: ['Le champ est facultatif ; la croix retire l\'agent.'],
+        },
+        {
+          id: 'nv-planning-collegues',
+          icon: 'group',
+          title: 'Planning : collègues du même créneau',
+          content: 'Dans « Mon emploi du temps », chaque créneau indique <strong>les collègues affectés au même créneau le même jour</strong> (« Avec Cheikh Sarr ») : ceux du matin voient ceux du matin, ceux du soir ceux du soir. Sinon : « Seul sur ce créneau ».',
+        },
+        {
+          id: 'nv-signalement-suivi',
+          icon: 'qr_code_2',
+          title: 'Signalements QR : suivi et sécurité',
+          content: 'Les interventions créées à partir d\'un signalement par QR code sont mieux suivies.',
+          tips: [
+            'Un badge dans la barre latérale signale les signalements à traiter.',
+            'Un signalement ne peut être affecté <strong>qu\'une seule fois</strong> : si un collègue l\'a déjà pris, l\'affectation est refusée.',
+            'Le message vocal laissé par l\'agent est maintenant aussi accessible au technicien assigné (« Écouter le message vocal »).',
+            'Rapport → Journal détaillé : filtre « Origine : Signalement QR », compteur dédié et colonne Origine (aussi dans les exports).',
+          ]
+        },
+        {
+          id: 'nv-rapport-divers',
+          icon: 'assessment',
+          title: 'Rapport : période de synthèse et pagination',
+          content: 'Le menu <strong>« Période (synthèse) »</strong> propose les mêmes raccourcis que le sélecteur de période (Aujourd\'hui, Cette semaine, Ce mois-ci, Année dernière...) au lieu de « 30 derniers jours / 3 derniers mois ». Le défaut est « Ce mois-ci ». La liste détaillée du Journal est désormais paginée.',
+        },
+        {
+          id: 'nv-affectations-recent',
+          icon: 'sort',
+          title: 'Affectations : plus récentes en premier',
+          content: 'La page Affectations s\'ouvre triée par <strong>date décroissante</strong>, sur ordinateur comme sur mobile. Sur ordinateur, le tri par priorité reste disponible en cliquant sur l\'en-tête de colonne.',
+        },
+        {
+          id: 'nv-hors-ligne',
+          icon: 'wifi_off',
+          title: 'Agents : compteur « hors ligne +24h » plus juste',
+          content: 'Les agents au statut <strong>Inactif</strong> ou <strong>Redéployé</strong> ne sont plus comptés dans « hors ligne +24h » : leur absence de connexion est normale.',
+        },
+        {
+          id: 'nv-design',
+          icon: 'palette',
+          title: 'Filtres et listes déroulantes harmonisés',
+          content: 'Tous les filtres et formulaires utilisent le même style arrondi, avec une icône et un libellé au-dessus du champ. Les listes déroulantes affichent l\'option choisie avec un badge de validation. Sur le Rapport, les filtres avancés tiennent sur une seule ligne (défilement horizontal sur petit écran).',
+        },
       ]
     },
 
@@ -927,6 +1016,7 @@ export class DocsComponent {
             { icon: 'people', title: 'Export agents', detail: 'Agents → appliquer les filtres souhaités → bouton « Export PDF » (fichier téléchargé directement) ou « Export CSV ».' },
             { icon: 'history', title: 'Export interventions', detail: 'Rapport → filtrer par période → « Exporter ». Le PDF inclut date et numérotation de pages.' },
             { icon: 'assessment', title: 'Rapport productivité', detail: 'Menu → « Rapport productivité » (Super Admin uniquement) → vue mensuelle par technicien avec export PDF multi-sections.' },
+            { icon: 'query_stats', title: 'Suivi des attentes', detail: 'Rapport → onglet « Attentes » → évolution des motifs d\'attente, durées et journal des mini-rapports, avec export CSV.' },
           ],
           tips: [
             'Appliquer les filtres voulus avant d\'exporter — seules les données affichées sont incluses dans le PDF.',
@@ -1035,6 +1125,7 @@ export class DocsComponent {
           steps: [
             { icon: 'people', title: 'Export agents de ma zone', detail: 'Agents → les données exportées (PDF/CSV) contiennent uniquement votre zone.' },
             { icon: 'history', title: 'Export historique', detail: 'Rapport → filtrer → exporter la période souhaitée.' },
+            { icon: 'query_stats', title: 'Suivi des attentes', detail: 'Rapport → onglet « Attentes » : motifs, durées et mini-rapports des interventions de votre zone.' },
           ]
         },
       ]
@@ -1073,13 +1164,15 @@ export class DocsComponent {
             { icon: 'people', title: 'Identifier l\'agent', detail: 'Voir la fiche de l\'agent concerné : nom, téléphone, AnyDesk caisse, AnyDesk serveur, TeamViewer.' },
             { icon: 'play_arrow', title: 'Démarrer l\'intervention', detail: 'Bouton « Démarrer » → le statut passe à « En cours ». Un badge chronomètre s\'affiche en temps réel sur la ligne.' },
             { icon: 'computer', title: 'Intervenir à distance', detail: 'Utiliser l\'ID AnyDesk ou TeamViewer indiqué sur la fiche agent pour établir la connexion.' },
+            { icon: 'pause_circle', title: 'Si vous devez attendre', detail: 'Bouton « En attente » → motif + mini-rapport (ex. instructions données à l\'agent qui rappelle demain). Ajouter un nouveau mini-rapport au moins toutes les 24h tant que l\'intervention reste ouverte.' },
             { icon: 'done', title: 'Clôturer', detail: 'Bouton « Terminer » → ajouter une note de résolution → statut « Terminée ». Ou « Échec » si non résolu.' },
           ],
           tips: [
             'L\'AnyDesk Caisse et l\'AnyDesk Serveur sont distincts — vérifier lequel est concerné avant de vous connecter.',
             'Rédiger une note de résolution claire aide l\'historique et le Super Admin à analyser les incidents récurrents.',
             'Pour les interventions urgentes, traiter en priorité même si d\'autres sont en attente.',
-            'Utilisez le filtre « Du / Au » pour retrouver rapidement des interventions sur une période précise.',
+            'Utilisez le filtre « Période » (raccourcis Aujourd\'hui, Cette semaine...) pour retrouver rapidement des interventions sur une période précise.',
+            'Un rappel rouge en haut de « Mes interventions » signale les attentes de plus de 24h sans mini-rapport.',
             'Le bouton Cloner (icône copie) permet de dupliquer une intervention pour un problème récurrent similaire.',
           ],
           warnings: [
@@ -1138,7 +1231,7 @@ export class DocsComponent {
           title: 'Planning & Missions',
           content: 'Consultez votre planning de présence et vos missions assignées.',
           steps: [
-            { icon: 'calendar_month', title: 'Voir mon planning', detail: 'Menu → « Planning & Rotation » → vue de votre calendrier personnel.' },
+            { icon: 'calendar_month', title: 'Voir mon planning', detail: 'Menu → « Planning & Rotation » → vue de votre calendrier personnel. Chaque créneau indique les collègues qui font le même créneau ce jour-là.' },
             { icon: 'assignment_ind', title: 'Mes missions', detail: 'Menu → « Missions internes » → liste des missions de livraison ou de terrain qui vous sont attribuées.' },
           ]
         },
@@ -1223,6 +1316,7 @@ export class DocsComponent {
           },
           tips: [
             'Filtrer par « En attente » pour s\'assurer qu\'aucune intervention ne reste non assignée.',
+            'Sous le compteur « En cours », « dont N en attente · M à relancer » liste les interventions bloquées (cliquer pour filtrer) ; un badge rouge signale celles sans mini-rapport depuis plus de 24h.',
             'Contacter l\'agent après clôture pour vérifier sa satisfaction — cela réduit les récidives.',
           ]
         },
