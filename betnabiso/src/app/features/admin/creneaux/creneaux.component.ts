@@ -127,7 +127,7 @@ import { Creneau, CRENEAU_PALETTE } from '../../../core/models/creneau.model';
     .label-input { flex: 2; min-width: 160px; }
     .time-input { flex: 1; min-width: 110px; }
 
-    .palette-row { display: flex; align-items: center; gap: 8px; margin: -8px 0 12px; flex-wrap: wrap; }
+    .palette-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 12px; flex-wrap: wrap; }
     .palette-label { font-size: 12px; color: var(--text-secondary); margin-right: 4px; }
     .swatch {
       width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent;
